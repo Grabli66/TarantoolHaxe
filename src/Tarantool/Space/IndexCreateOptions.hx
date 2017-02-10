@@ -25,7 +25,7 @@ typedef IndexCreateOptions = {
     /**
         Fields
     **/
-    ?parts : Dynamic,
+    ?parts : Array<IndexPart>,
 
     /**
         Affects RTREE only

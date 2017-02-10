@@ -2,8 +2,8 @@
     Index types
 **/
 enum IndexType {
-    HASH;
-    TREE;
-    BITSET;
-    RTREE;
+    hash;
+    tree;
+    bitset;
+    rtree;
 }

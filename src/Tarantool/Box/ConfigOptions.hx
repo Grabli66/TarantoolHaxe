@@ -2,6 +2,74 @@
     Config structure for boxcfg function
 **/
 typedef ConfigOptions = {
+    /**
+        The read/write data port number or URI (Universal Resource Identifier) string. 
+        Has no default value, so must be specified if connections will occur from remote clients that do not use the “admin port”. 
+        Connections made with listen = URI are sometimes called “binary protocol” or “primary port” connections.
+        A typical value is 3301
+    **/
     listen : Int,
-    ?pid_file : String
+
+    /**
+        Store the process id in this file. Can be relative to work_dir. A typical value is “tarantool.pid”.
+    **/
+    ?pid_file : String,
+
+    /**
+        Put the server in read-only mode. After this, any requests that try to change data will fail with error ER_READONLY.
+    **/
+    ?read_only : Bool,
+
+    /**
+        A directory where snapshot (.snap) files will be stored. Can be relative to work_dir. If not specified, defaults to work_dir. See also wal_dir.
+    **/
+    ?snap_dir : String,
+
+    /**
+        A directory where vinyl files or subdirectories will be stored. Can be relative to work_dir. If not specified, defaults to work_dir.
+    **/
+    ?vinyl_dir : String,
+
+    /**
+        UNIX user name to switch to after start.
+    **/
+    ?username : String,
+
+    /**
+        A directory where write-ahead log (.xlog) files are stored. Can be relative to work_dir. 
+        Sometimes wal_dir and snap_dir are specified with different values, so that write-ahead log files and snapshot files can be stored on different disks. 
+        If not specified, defaults to work_dir.
+    **/
+    ?wal_dir : String,
+
+    /**
+        A directory where database working files will be stored. The server switches to work_dir with chdir(2) after start. 
+        Can be relative to the current directory. If not specified, defaults to the current directory. 
+        Other directory parameters may be relative to work_dir.   
+    **/
+    ?work_dir : String,
+
+    /**
+        How much memory Tarantool allocates to actually store tuples, in gigabytes. 
+        When the limit is reached, INSERT or UPDATE requests begin failing with error ER_MEMORY_ISSUE. 
+        While the server does not go beyond the defined limit to allocate tuples, there is additional memory used to store indexes and connection information.
+        Depending on actual configuration and workload, Tarantool can consume up to 20% more than the limit set here.
+    **/
+    ?slab_alloc_arena : Float,
+
+    /**
+        Use slab_alloc_factor as the multiplier for computing the sizes of memory chunks that tuples are stored in. 
+        A lower value may result in less wasted memory depending on the total amount of memory available and the distribution of item sizes.
+    **/
+    ?slab_alloc_factor : Float,
+
+    /**
+        Size of the largest allocation unit. It can be increased if it is necessary to store large tuples.
+    **/
+    ?slab_alloc_maximal : Float,
+
+    /**
+        Size of the smallest allocation unit. It can be decreased if most of the tuples are very small. The value must be between 8 and 1048280 inclusive.
+    **/
+    ?slab_alloc_minimal : Int,
 }

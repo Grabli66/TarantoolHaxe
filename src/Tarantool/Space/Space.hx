@@ -5,7 +5,7 @@ import lua.Table;
 **/
 class Space {
     /**
-        Table name
+        Space name
     **/
     public var Name (default, null) : String;
 
@@ -77,9 +77,25 @@ class Space {
     public function CreateIndex (name : String, ?options : IndexCreateOptions) : Index {
         var tbl = Table.create ();
         if (options != null) {
+            if (options.unique != null) untyped tbl["unique"] = options.unique;
+            if (options.type != null) untyped tbl["type"] = options.type.getName ();
 
+            if (options.parts != null) {
+                var parts = Table.create ();
+                var i = 0;
+                for (e in options.parts) {
+                    var fn = e.field_no;
+                    var name = e.type.getName ();                    
+                    var pos = i * 2 + 1;                    
+                    untyped parts[pos] = fn;
+                    untyped parts[pos + 1] = name;
+                    i += 1;
+                }
+                untyped tbl["parts"] = parts;
+            }
         }
 
+        trace (tbl);
         var res = untyped box.space[Name].create_index (name, tbl);
         return new Index (this, res.id);
     }
@@ -106,7 +122,7 @@ class Space {
     **/
     public function Insert (data : Dynamic) : Void {
         var tuple = Convert.DynamicToTable (data);
-        untyped box.space[Name].insert (tuple); 
+        untyped box.space[Name].insert (tuple);
     }
 
     /**
@@ -121,45 +137,48 @@ class Space {
         Return number of record in space
     **/
     public function Len () : Int {
-        return untyped box.space[Name].len (); 
+        return untyped box.space[Name].len ();
     }
 
     /**
         Deletes all records
     **/
-    public function Truncate () : Void {        
-        return untyped box.space[Name].truncate (); 
+    public function Truncate () : Void {
+        return untyped box.space[Name].truncate ();
     }
 
     /**
         Update data
     **/
-    public function Update (key : Int, update : Dynamic) : Void {
-        /*var pars = Table.create ();
-        for (i in 1...update.length + 1) {            
-            var it = update[i - 1];
-            var utbl = Table.create ();     
-            switch (it.Operator) {
-                case OperatorType.Equal: {
-                    untyped utbl[1] = '=';                    
-                    untyped utbl[2] = it.Position;                    
-                    untyped utbl[3] = Convert.ConvertDynamic (it.Value);
-                }
-            }
-            pars[i] = utbl;
-        }
-                    
-        untyped box.space[Name].update (key, pars);*/
+    public function Update (keys : Dynamic, query : Array<Array<Dynamic>>) : Void {
+        var ks = Convert.ConvertDynamic (keys);
+        var qu = Convert.ConvertDynamic (query);
+        untyped box.space[Name].update (ks, qu);       
     }
     
     /**
         Select data by keys
     **/
     public function Select (?keys : Dynamic) : Array<Dynamic> {
-        var d : AnyTable = untyped box.space[Name].select (1);
-        Table.foreach (d, function (e, i) {
-            
-        });
-        return null;
+        var table : AnyTable;
+
+        if (keys != null) {
+            var keys = Convert.ConvertDynamic (keys);
+            table = untyped box.space[Name].select (keys);            
+        } else {
+            table = untyped box.space[Name].select ();            
+        }
+        
+        return Convert.FromTable (table);
+    }
+
+    /**
+        Delete a tuple identified by a primary key.
+        Return the deleted tuple
+    **/
+    public function Delete (keys : Dynamic) : Array<Dynamic> {
+        var keys = Convert.ConvertDynamic (keys);
+        var table = untyped box.space[Name].select (keys);
+        return Convert.FromTable (table);
     }
 }

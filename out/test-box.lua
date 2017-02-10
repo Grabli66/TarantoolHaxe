@@ -57,20 +57,46 @@ Enum = _hx_e();
 
 local Array = _hx_e()
 local Box = _hx_e()
+local Convert = _hx_e()
+local Index = _hx_e()
+local IndexFieldType = _hx_e()
+local IndexType = _hx_e()
+local _Map = {}
+_Map.Map_Impl_ = _hx_e()
+local Reflect = _hx_e()
 local Space = _hx_e()
 local String = _hx_e()
 local Std = _hx_e()
 local TestBox = _hx_e()
+local Type = _hx_e()
 local haxe = {}
+haxe.IMap = _hx_e()
 haxe.Log = _hx_e()
+haxe.ds = {}
+haxe.ds.BalancedTree = _hx_e()
+haxe.ds.TreeNode = _hx_e()
+haxe.ds.EnumValueMap = _hx_e()
+haxe.ds.IntMap = _hx_e()
+haxe.ds.ObjectMap = _hx_e()
+haxe.ds.StringMap = _hx_e()
 haxe.io = {}
 haxe.io.Eof = _hx_e()
 local lua = {}
 lua.Boot = _hx_e()
+lua.UserData = _hx_e()
+lua.Thread = _hx_e()
 
 local _hx_bind, _hx_bit, _hx_staticToInstance, _hx_funcToField, _hx_maxn, _hx_print, _hx_apply_self, _hx_box_mr, _hx_bit_clamp, _hx_table, _hx_bit_raw
 
-Array.new = {}
+Array.new = function() 
+  local self = _hx_new(Array.prototype)
+  Array.super(self)
+  return self
+end
+Array.super = function(self) 
+  _hx_tab_array(self,0);
+end
+Array.__name__ = true
 Array.prototype = _hx_a(
   'join', function(self,sep) 
     local tbl = ({});
@@ -88,6 +114,15 @@ Array.prototype = _hx_a(
       end;
     do return _G.table.concat(tbl,sep) end
   end,
+  'pop', function(self) 
+    if (self.length == 0) then 
+      do return nil end;
+    end;
+    local rawlength = _G.rawget(self,"length");
+    local ret = _G.rawget(self,rawlength - 1);
+    _G.rawset(self,"length",rawlength - 1);
+    do return ret end
+  end,
   'push', function(self,x) 
     _G.rawset(self,self.length,x);
     _G.rawset(self,"length",self.length + 1);
@@ -103,17 +138,315 @@ Array.prototype = _hx_a(
       do return _gthis[cur_length - 1] end;
     end}) end
   end
+  ,'__class__',  Array
 )
 
 Box.new = {}
+Box.__name__ = true
 Box.Cfg = function(options) 
   local listen = options.listen;
   local pidFile = options.pid_file;
-  local tbl = ({listen = listen, pid_file = pidFile});
+  local walDir = options.wal_dir;
+  local workDir = options.work_dir;
+  local slabAllocArena = options.slab_alloc_arena;
+  local tbl = ({listen = listen, pid_file = pidFile, wal_dir = walDir, work_dir = workDir, slab_alloc_arena = slabAllocArena});
   box.cfg(tbl);
 end
 Box.Once = function(id,func) 
   box.once(id,func);
+end
+
+Convert.new = {}
+Convert.__name__ = true
+Convert.ConvertDynamic = function(object) 
+  if ((lua.Boot.__instanceof(object,Int) or lua.Boot.__instanceof(object,Float)) or lua.Boot.__instanceof(object,String)) then 
+    do return object end;
+  else
+    if (lua.Boot.__instanceof(object,Array)) then 
+      do return Convert.ArrayToTable(lua.Boot.__cast(object , Array)) end;
+    else
+      if (lua.Boot.__instanceof(object,_Map.Map_Impl_)) then 
+        do return Convert.MapToTable(lua.Boot.__cast(object , haxe.IMap)) end;
+      else
+        if (Reflect.isObject(object)) then 
+          local tbl = ({});
+          local fields = Reflect.fields(object);
+          local _g1 = 1;
+          local _g = fields.length + 1;
+          while (_g1 < _g) do 
+            _g1 = _g1 + 1;
+            local i = _g1 - 1;
+            local f = fields[i - 1];
+            local tmp;
+            local v;
+            if (object == nil) then 
+              v = nil;
+            else
+              if ((object.__properties__ ~= nil) and (Reflect.field(object,"get_" .. f) ~= nil)) then 
+                local func = Reflect.field(object,"get_" .. f);
+                local args = _hx_tab_array({ }, 0);
+                if ((args == nil) or (args.length == 0)) then 
+                  v = func(object);
+                else
+                  local self_arg = false;
+                  if ((object ~= nil) and (Type.getClass(object) ~= nil)) then 
+                    self_arg = true;
+                  end;
+                  local new_args = ({});
+                  local _g11 = 0;
+                  local _g2 = args.length;
+                  while (_g11 < _g2) do 
+                    _g11 = _g11 + 1;
+                    local i1 = _g11 - 1;
+                    new_args[i1 + 1] = args[i1];
+                    end;
+                  if (self_arg) then 
+                    v = func(object,_hx_table.unpack(new_args,1,_hx_table.maxn(new_args)));
+                  else
+                    v = func(_hx_table.unpack(new_args,1,_hx_table.maxn(new_args)));
+                  end;
+                end;
+              else
+                v = Reflect.field(object,f);
+              end;
+            end;
+            local v1 = v;
+            local d = Convert.ConvertDynamic(v1);
+            tbl[f] = d;
+            end;
+          do return tbl end;
+        end;
+      end;
+    end;
+  end;
+  do return nil end;
+end
+Convert.ArrayToTable = function(data) 
+  local tbl = ({});
+  local _g1 = 1;
+  local _g = data.length + 1;
+  while (_g1 < _g) do 
+    _g1 = _g1 + 1;
+    local i = _g1 - 1;
+    local d = data[i - 1];
+    tbl[i] = Convert.ConvertDynamic(d);
+    end;
+  do return tbl end;
+end
+Convert.MapToTable = function(data) 
+  local tbl = ({});
+  local k = data:keys();
+  while (k:hasNext()) do 
+    local k1 = k:next();
+    local v = data:get(k1);
+    if ((lua.Boot.__instanceof(k1,Int) or lua.Boot.__instanceof(k1,Float)) or lua.Boot.__instanceof(k1,String)) then 
+      tbl[k1] = Convert.ConvertDynamic(v);
+    end;
+    end;
+  do return tbl end;
+end
+Convert.DynamicToTable = function(data) 
+  local res = Convert.ConvertDynamic(data);
+  if (lua.Boot.__instanceof(res,_G.table)) then 
+    do return res end;
+  else
+    local tbl = ({});
+    tbl[1] = res;
+    do return tbl end;
+  end;
+end
+Convert.FromTable = function(table) 
+  local res = Array.new();
+  _G.table.foreach(table,function(i,it) 
+    local typ = type(it);
+    if (typ == "cdata") then 
+      local tab = it:totable();
+      local tmp = Convert.FromTable(tab);
+      res:push(tmp);
+    else
+      res:push(it);
+    end;
+  end);
+  do return res end;
+end
+
+Index.new = function(parent,id) 
+  local self = _hx_new(Index.prototype)
+  Index.super(self,parent,id)
+  return self
+end
+Index.super = function(self,parent,id) 
+  self.Parent = parent;
+  self.Id = id;
+end
+Index.__name__ = true
+Index.prototype = _hx_a(
+  
+  '__class__',  Index
+)
+_hxClasses["IndexFieldType"] = { __ename__ = true, __constructs__ = _hx_tab_array({[0]="unsigned","string","integer","number","array","scalar"},6)}
+IndexFieldType = _hxClasses["IndexFieldType"];
+IndexFieldType.unsigned = _hx_tab_array({[0]="unsigned",0,__enum__ = IndexFieldType},2)
+
+IndexFieldType.string = _hx_tab_array({[0]="string",1,__enum__ = IndexFieldType},2)
+
+IndexFieldType.integer = _hx_tab_array({[0]="integer",2,__enum__ = IndexFieldType},2)
+
+IndexFieldType.number = _hx_tab_array({[0]="number",3,__enum__ = IndexFieldType},2)
+
+IndexFieldType.array = _hx_tab_array({[0]="array",4,__enum__ = IndexFieldType},2)
+
+IndexFieldType.scalar = _hx_tab_array({[0]="scalar",5,__enum__ = IndexFieldType},2)
+
+_hxClasses["IndexType"] = { __ename__ = true, __constructs__ = _hx_tab_array({[0]="hash","tree","bitset","rtree"},4)}
+IndexType = _hxClasses["IndexType"];
+IndexType.hash = _hx_tab_array({[0]="hash",0,__enum__ = IndexType},2)
+
+IndexType.tree = _hx_tab_array({[0]="tree",1,__enum__ = IndexType},2)
+
+IndexType.bitset = _hx_tab_array({[0]="bitset",2,__enum__ = IndexType},2)
+
+IndexType.rtree = _hx_tab_array({[0]="rtree",3,__enum__ = IndexType},2)
+
+
+_Map.Map_Impl_.new = {}
+_Map.Map_Impl_.__name__ = true
+_Map.Map_Impl_.set = function(this1,key,value) 
+  this1:set(key,value);
+end
+_Map.Map_Impl_.get = function(this1,key) 
+  do return this1:get(key) end;
+end
+_Map.Map_Impl_.exists = function(this1,key) 
+  do return this1:exists(key) end;
+end
+_Map.Map_Impl_.remove = function(this1,key) 
+  do return this1:remove(key) end;
+end
+_Map.Map_Impl_.keys = function(this1) 
+  do return this1:keys() end;
+end
+_Map.Map_Impl_.iterator = function(this1) 
+  do return this1:iterator() end;
+end
+_Map.Map_Impl_.toString = function(this1) 
+  do return this1:toString() end;
+end
+_Map.Map_Impl_.arrayWrite = function(this1,k,v) 
+  this1:set(k,v);
+  do return v end;
+end
+_Map.Map_Impl_.toStringMap = function(t) 
+  do return haxe.ds.StringMap.new() end;
+end
+_Map.Map_Impl_.toIntMap = function(t) 
+  do return haxe.ds.IntMap.new() end;
+end
+_Map.Map_Impl_.toEnumValueMapMap = function(t) 
+  do return haxe.ds.EnumValueMap.new() end;
+end
+_Map.Map_Impl_.toObjectMap = function(t) 
+  do return haxe.ds.ObjectMap.new() end;
+end
+_Map.Map_Impl_.fromStringMap = function(map) 
+  do return map end;
+end
+_Map.Map_Impl_.fromIntMap = function(map) 
+  do return map end;
+end
+_Map.Map_Impl_.fromObjectMap = function(map) 
+  do return map end;
+end
+
+Reflect.new = {}
+Reflect.__name__ = true
+Reflect.field = function(o,field) 
+  local _hx_expected_result = {}
+  local _hx_status, _hx_result = pcall(function() 
+  
+      do return o[field] end;
+     return _hx_expected_result end)
+   if not _hx_status then 
+    local _hx_1 = _hx_result
+    local e = _hx_1
+    do return nil end;
+   elseif _hx_result ~= _hx_expected_result then return _hx_result end;
+end
+Reflect.fields = function(o) 
+  local _g = _hx_tab_array({ }, 0);
+  local f = lua.Boot.fieldIterator(o);
+  while (f:hasNext()) do 
+    local f1 = f:next();
+    _g:push(f1);
+    end;
+  do return _g end;
+end
+Reflect.compare = function(a,b) 
+  if (a == b) then 
+    do return 0 end;
+  else
+    if (a == nil) then 
+      do return -1 end;
+    else
+      if (b == nil) then 
+        do return 1 end;
+      else
+        if (a > b) then 
+          do return 1 end;
+        else
+          do return -1 end;
+        end;
+      end;
+    end;
+  end;
+end
+Reflect.isObject = function(v) 
+  if (v == nil) then 
+    do return false end;
+  end;
+  local t = type(v);
+  if (not ((t == "string") or ((t == "table") and (v.__enum__ == nil)))) then 
+    if (t == "function") then 
+      do return ((function() 
+        local _hx_1
+        if (_G.type(v) ~= "table") then 
+        _hx_1 = false; else 
+        _hx_1 = v.__name__; end
+        return _hx_1
+      end )() or (function() 
+        local _hx_2
+        if (_G.type(v) ~= "table") then 
+        _hx_2 = false; else 
+        _hx_2 = v.__ename__; end
+        return _hx_2
+      end )()) ~= nil end;
+    else
+      do return false end;
+    end;
+  else
+    do return true end;
+  end;
+end
+Reflect.isEnumValue = function(v) 
+  if ((v ~= nil) and lua.Boot.__instanceof(v,_G.table)) then 
+    do return v.__enum__ ~= nil end;
+  else
+    do return false end;
+  end;
+end
+Reflect.deleteField = function(o,field) 
+  if (not ((function() 
+    local _hx_1
+    if (o.__fields__ ~= nil) then 
+    _hx_1 = o.__fields__[field] ~= nil; else 
+    _hx_1 = o[field] ~= nil; end
+    return _hx_1
+  end )())) then 
+    do return false end;
+  end;
+  o[field] = nil;
+  o.__fields__[field] = nil;
+  do return true end;
 end
 
 Space.new = function(name) 
@@ -124,6 +457,7 @@ end
 Space.super = function(self,name) 
   self.Name = name;
 end
+Space.__name__ = true
 Space.Create = function(name,options) 
   local table = nil;
   if (options ~= nil) then 
@@ -144,18 +478,56 @@ Space.Get = function(name)
   end;
 end
 Space.prototype = _hx_a(
+  'CreateIndex', function(self,name,options) 
+    local tbl = ({});
+    if (options ~= nil) then 
+      if (options.unique ~= nil) then 
+        tbl.unique = options.unique;
+      end;
+      if (options.type ~= nil) then 
+        tbl.type = options.type[0];
+      end;
+      if (options.parts ~= nil) then 
+        local parts = ({});
+        local i = 0;
+        local _g = 0;
+        local _g1 = options.parts;
+        while (_g < _g1.length) do 
+          local e = _g1[_g];
+          _g = _g + 1;
+          local fn = e.field_no;
+          local name1 = e.type[0];
+          local pos = (i * 2) + 1;
+          parts[pos] = fn;
+          parts[pos + 1] = name1;
+          i = i + 1;
+          end;
+        tbl.parts = parts;
+      end;
+    end;
+    haxe.Log.trace(tbl,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="Space.hx",lineNumber=98,className="Space",methodName="CreateIndex"}));
+    local res = box.space[self.Name]:create_index(name,tbl);
+    do return Index.new(self,res.id) end
+  end,
+  'AutoIncrement', function(self,data) 
+    local tuple = Convert.DynamicToTable(data);
+    box.space[self.Name]:auto_increment(tuple);
+  end,
   'Select', function(self,keys) 
-    local d = box.space[self.Name]:select(1);
-    _G.table.foreach(d,function(e,i) 
-      _G.table.foreach(i,function(e1,i1) 
-        haxe.Log.trace(i,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="Space.hx",lineNumber=162,className="Space",methodName="Select"}));
-      end);
-    end);
-    do return nil end
+    local table;
+    if (keys ~= nil) then 
+      local keys1 = Convert.ConvertDynamic(keys);
+      table = box.space[self.Name]:select(keys1);
+    else
+      table = box.space[self.Name]:select();
+    end;
+    do return Convert.FromTable(table) end
   end
+  ,'__class__',  Space
 )
 
 String.new = {}
+String.__name__ = true
 String.__index = function(s,k) 
   if (k == "length") then 
     do return _G.string.len(s) end;
@@ -186,24 +558,64 @@ String.prototype = _hx_a(
   'toString', function(self) 
     do return self end
   end
+  ,'__class__',  String
 )
 
 Std.new = {}
+Std.__name__ = true
 Std.string = function(s) 
   do return lua.Boot.__string_rec(s) end;
 end
 
 TestBox.new = {}
+TestBox.__name__ = true
 TestBox.main = function() 
-  Box.Cfg(_hx_o({__fields__={listen=true},listen=3301}));
-  Box.Once("create",function() 
-    Space.Create("test",_hx_o({__fields__={id=true},id=1}));
+  Box.Cfg(_hx_o({__fields__={listen=true,slab_alloc_arena=true,work_dir=true,wal_dir=true},listen=3301,slab_alloc_arena=0.1,work_dir="./snaps",wal_dir="."}));
+  Box.Once("first",function() 
+    local space = Space.Create("test",_hx_o({__fields__={id=true},id=1}));
+    space:CreateIndex("primary",_hx_o({__fields__={unique=true,type=true,parts=true},unique=true,type=IndexType.tree,parts=_hx_tab_array({[0]=_hx_o({__fields__={field_no=true,type=true},field_no=1,type=IndexFieldType.unsigned}), _hx_o({__fields__={field_no=true,type=true},field_no=2,type=IndexFieldType.string}) }, 2)}));
+    space:AutoIncrement(_hx_tab_array({[0]="dd", 34, 4, 5 }, 4));
+    space:AutoIncrement(_hx_tab_array({[0]="dd", 35, 4, 5 }, 4));
+    space:AutoIncrement(_hx_tab_array({[0]="ff", 44, 4, 5 }, 4));
+    space:AutoIncrement(_hx_tab_array({[0]="ss", 12, 5, 8 }, 4));
   end);
-  local space = Space.Get("test");
-  space:Select();
+  local space1 = Space.Get("test");
+  local dat = space1:Select(_hx_tab_array({[0]=1, "dd" }, 2));
+  local _g = 0;
+  while (_g < dat.length) do 
+    local d = dat[_g];
+    _g = _g + 1;
+    haxe.Log.trace(d,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="TestBox.hx",lineNumber=36,className="TestBox",methodName="main"}));
+    end;
 end
 
+Type.new = {}
+Type.__name__ = true
+Type.getClass = function(o) 
+  if (o == nil) then 
+    do return nil end;
+  end;
+  if (lua.Boot.__instanceof(o,Array)) then 
+    do return Array end;
+  else
+    local cl = o.__class__;
+    if (cl ~= nil) then 
+      do return cl end;
+    else
+      do return nil end;
+    end;
+  end;
+end
+
+haxe.IMap.new = {}
+haxe.IMap.__name__ = true
+haxe.IMap.prototype = _hx_a(
+  
+  '__class__',  haxe.IMap
+)
+
 haxe.Log.new = {}
+haxe.Log.__name__ = true
 haxe.Log.trace = function(v,infos) 
   local str = nil;
   if (infos ~= nil) then 
@@ -220,14 +632,718 @@ haxe.Log.trace = function(v,infos)
   _hx_print(str);
 end
 
+haxe.ds.BalancedTree.new = function() 
+  local self = _hx_new(haxe.ds.BalancedTree.prototype)
+  haxe.ds.BalancedTree.super(self)
+  return self
+end
+haxe.ds.BalancedTree.super = function(self) 
+end
+haxe.ds.BalancedTree.__name__ = true
+haxe.ds.BalancedTree.prototype = _hx_a(
+  'set', function(self,key,value) 
+    self.root = self:setLoop(key,value,self.root);
+  end,
+  'get', function(self,key) 
+    local node = self.root;
+    while (node ~= nil) do 
+      local c = self:compare(key,node.key);
+      if (c == 0) then 
+        do return node.value end;
+      end;
+      if (c < 0) then 
+        node = node.left;
+      else
+        node = node.right;
+      end;
+      end;
+    do return nil end
+  end,
+  'remove', function(self,key) 
+    local _hx_expected_result = {}
+    local _hx_status, _hx_result = pcall(function() 
+    
+        self.root = self:removeLoop(key,self.root);
+        do return true end;
+       return _hx_expected_result end)
+     if not _hx_status then 
+      local _hx_1 = _hx_result
+      if( lua.Boot.__instanceof(_hx_1,String) ) then 
+        local e = _hx_1
+        do return false end;
+      else _G.error(_hx_1)
+      end
+     elseif _hx_result ~= _hx_expected_result then return _hx_result end;
+  end,
+  'exists', function(self,key) 
+    local node = self.root;
+    while (node ~= nil) do 
+      local c = self:compare(key,node.key);
+      if (c == 0) then 
+        do return true end;
+      else
+        if (c < 0) then 
+          node = node.left;
+        else
+          node = node.right;
+        end;
+      end;
+      end;
+    do return false end
+  end,
+  'iterator', function(self) 
+    local ret = _hx_tab_array({ }, 0);
+    self:iteratorLoop(self.root,ret);
+    local _gthis = ret;
+    local cur_length = 0;
+    do return _hx_o({__fields__={hasNext=true,next=true},hasNext=function() 
+      do return cur_length < _gthis.length end;
+    end,next=function() 
+      cur_length = cur_length + 1;
+      do return _gthis[cur_length - 1] end;
+    end}) end
+  end,
+  'keys', function(self) 
+    local ret = _hx_tab_array({ }, 0);
+    self:keysLoop(self.root,ret);
+    local _gthis = ret;
+    local cur_length = 0;
+    do return _hx_o({__fields__={hasNext=true,next=true},hasNext=function() 
+      do return cur_length < _gthis.length end;
+    end,next=function() 
+      cur_length = cur_length + 1;
+      do return _gthis[cur_length - 1] end;
+    end}) end
+  end,
+  'setLoop', function(self,k,v,node) 
+    if (node == nil) then 
+      do return haxe.ds.TreeNode.new(nil,k,v,nil) end;
+    end;
+    local c = self:compare(k,node.key);
+    if (c == 0) then 
+      do return haxe.ds.TreeNode.new(node.left,k,v,node.right,(function() 
+        local _hx_1
+        if (node == nil) then 
+        _hx_1 = 0; else 
+        _hx_1 = node._height; end
+        return _hx_1
+      end )()) end;
+    else
+      if (c < 0) then 
+        local nl = self:setLoop(k,v,node.left);
+        do return self:balance(nl,node.key,node.value,node.right) end;
+      else
+        local nr = self:setLoop(k,v,node.right);
+        do return self:balance(node.left,node.key,node.value,nr) end;
+      end;
+    end;
+  end,
+  'removeLoop', function(self,k,node) 
+    if (node == nil) then 
+      _G.error("Not_found",0);
+    end;
+    local c = self:compare(k,node.key);
+    if (c == 0) then 
+      do return self:merge(node.left,node.right) end;
+    else
+      if (c < 0) then 
+        do return self:balance(self:removeLoop(k,node.left),node.key,node.value,node.right) end;
+      else
+        do return self:balance(node.left,node.key,node.value,self:removeLoop(k,node.right)) end;
+      end;
+    end;
+  end,
+  'iteratorLoop', function(self,node,acc) 
+    if (node ~= nil) then 
+      self:iteratorLoop(node.left,acc);
+      acc:push(node.value);
+      self:iteratorLoop(node.right,acc);
+    end;
+  end,
+  'keysLoop', function(self,node,acc) 
+    if (node ~= nil) then 
+      self:keysLoop(node.left,acc);
+      acc:push(node.key);
+      self:keysLoop(node.right,acc);
+    end;
+  end,
+  'merge', function(self,t1,t2) 
+    if (t1 == nil) then 
+      do return t2 end;
+    end;
+    if (t2 == nil) then 
+      do return t1 end;
+    end;
+    local t = self:minBinding(t2);
+    do return self:balance(t1,t.key,t.value,self:removeMinBinding(t2)) end
+  end,
+  'minBinding', function(self,t) 
+    if (t == nil) then 
+      _G.error("Not_found",0);
+    else
+      if (t.left == nil) then 
+        do return t end;
+      else
+        do return self:minBinding(t.left) end;
+      end;
+    end;
+  end,
+  'removeMinBinding', function(self,t) 
+    if (t.left == nil) then 
+      do return t.right end;
+    else
+      do return self:balance(self:removeMinBinding(t.left),t.key,t.value,t.right) end;
+    end;
+  end,
+  'balance', function(self,l,k,v,r) 
+    local hl = (function() 
+      local _hx_1
+      if (l == nil) then 
+      _hx_1 = 0; else 
+      _hx_1 = l._height; end
+      return _hx_1
+    end )();
+    local hr = (function() 
+      local _hx_2
+      if (r == nil) then 
+      _hx_2 = 0; else 
+      _hx_2 = r._height; end
+      return _hx_2
+    end )();
+    if (hl > (hr + 2)) then 
+      local _this = l.left;
+      local _this1 = l.right;
+      if ((function() 
+        local _hx_3
+        if (_this == nil) then 
+        _hx_3 = 0; else 
+        _hx_3 = _this._height; end
+        return _hx_3
+      end )() >= (function() 
+        local _hx_4
+        if (_this1 == nil) then 
+        _hx_4 = 0; else 
+        _hx_4 = _this1._height; end
+        return _hx_4
+      end )()) then 
+        do return haxe.ds.TreeNode.new(l.left,l.key,l.value,haxe.ds.TreeNode.new(l.right,k,v,r)) end;
+      else
+        do return haxe.ds.TreeNode.new(haxe.ds.TreeNode.new(l.left,l.key,l.value,l.right.left),l.right.key,l.right.value,haxe.ds.TreeNode.new(l.right.right,k,v,r)) end;
+      end;
+    else
+      if (hr > (hl + 2)) then 
+        local _this2 = r.right;
+        local _this3 = r.left;
+        if ((function() 
+          local _hx_5
+          if (_this2 == nil) then 
+          _hx_5 = 0; else 
+          _hx_5 = _this2._height; end
+          return _hx_5
+        end )() > (function() 
+          local _hx_6
+          if (_this3 == nil) then 
+          _hx_6 = 0; else 
+          _hx_6 = _this3._height; end
+          return _hx_6
+        end )()) then 
+          do return haxe.ds.TreeNode.new(haxe.ds.TreeNode.new(l,k,v,r.left),r.key,r.value,r.right) end;
+        else
+          do return haxe.ds.TreeNode.new(haxe.ds.TreeNode.new(l,k,v,r.left.left),r.left.key,r.left.value,haxe.ds.TreeNode.new(r.left.right,r.key,r.value,r.right)) end;
+        end;
+      else
+        do return haxe.ds.TreeNode.new(l,k,v,r,(function() 
+          local _hx_7
+          if (hl > hr) then 
+          _hx_7 = hl; else 
+          _hx_7 = hr; end
+          return _hx_7
+        end )() + 1) end;
+      end;
+    end;
+  end,
+  'compare', function(self,k1,k2) 
+    do return Reflect.compare(k1,k2) end
+  end,
+  'toString', function(self) 
+    if (self.root == nil) then 
+      do return "{}" end;
+    else
+      do return "{" .. self.root:toString() .. "}" end;
+    end;
+  end
+  ,'__class__',  haxe.ds.BalancedTree
+)
+
+haxe.ds.TreeNode.new = function(l,k,v,r,h) 
+  local self = _hx_new(haxe.ds.TreeNode.prototype)
+  haxe.ds.TreeNode.super(self,l,k,v,r,h)
+  return self
+end
+haxe.ds.TreeNode.super = function(self,l,k,v,r,h) 
+  if (h == nil) then 
+    h = -1;
+  end;
+  self.left = l;
+  self.key = k;
+  self.value = v;
+  self.right = r;
+  if (h == -1) then 
+    local tmp;
+    local _this = self.left;
+    local _this1 = self.right;
+    if ((function() 
+      local _hx_1
+      if (_this == nil) then 
+      _hx_1 = 0; else 
+      _hx_1 = _this._height; end
+      return _hx_1
+    end )() > (function() 
+      local _hx_2
+      if (_this1 == nil) then 
+      _hx_2 = 0; else 
+      _hx_2 = _this1._height; end
+      return _hx_2
+    end )()) then 
+      local _this2 = self.left;
+      if (_this2 == nil) then 
+        tmp = 0;
+      else
+        tmp = _this2._height;
+      end;
+    else
+      local _this3 = self.right;
+      if (_this3 == nil) then 
+        tmp = 0;
+      else
+        tmp = _this3._height;
+      end;
+    end;
+    self._height = tmp + 1;
+  else
+    self._height = h;
+  end;
+end
+haxe.ds.TreeNode.__name__ = true
+haxe.ds.TreeNode.prototype = _hx_a(
+  'toString', function(self) 
+    do return ((function() 
+      local _hx_1
+      if (self.left == nil) then 
+      _hx_1 = ""; else 
+      _hx_1 = self.left:toString() .. ", "; end
+      return _hx_1
+    end )()) .. ("" .. Std.string(self.key) .. "=" .. Std.string(self.value)) .. ((function() 
+      local _hx_2
+      if (self.right == nil) then 
+      _hx_2 = ""; else 
+      _hx_2 = ", " .. self.right:toString(); end
+      return _hx_2
+    end )()) end
+  end
+  ,'__class__',  haxe.ds.TreeNode
+)
+
+haxe.ds.EnumValueMap.new = function() 
+  local self = _hx_new(haxe.ds.EnumValueMap.prototype)
+  haxe.ds.EnumValueMap.super(self)
+  return self
+end
+haxe.ds.EnumValueMap.super = function(self) 
+  haxe.ds.BalancedTree.super(self);
+end
+haxe.ds.EnumValueMap.__name__ = true
+haxe.ds.EnumValueMap.__interfaces__ = {haxe.IMap}
+haxe.ds.EnumValueMap.prototype = _hx_a(
+  'compare', function(self,k1,k2) 
+    local d = k1[1] - k2[1];
+    if (d ~= 0) then 
+      do return d end;
+    end;
+    local p1 = k1:slice(2);
+    local p2 = k2:slice(2);
+    if ((p1.length == 0) and (p2.length == 0)) then 
+      do return 0 end;
+    end;
+    do return self:compareArgs(p1,p2) end
+  end,
+  'compareArgs', function(self,a1,a2) 
+    local ld = a1.length - a2.length;
+    if (ld ~= 0) then 
+      do return ld end;
+    end;
+    local _g1 = 0;
+    local _g = a1.length;
+    while (_g1 < _g) do 
+      _g1 = _g1 + 1;
+      local i = _g1 - 1;
+      local d = self:compareArg(a1[i],a2[i]);
+      if (d ~= 0) then 
+        do return d end;
+      end;
+      end;
+    do return 0 end
+  end,
+  'compareArg', function(self,v1,v2) 
+    if (Reflect.isEnumValue(v1) and Reflect.isEnumValue(v2)) then 
+      do return self:compare(v1,v2) end;
+    else
+      if (lua.Boot.__instanceof(v1,Array) and lua.Boot.__instanceof(v2,Array)) then 
+        do return self:compareArgs(v1,v2) end;
+      else
+        do return Reflect.compare(v1,v2) end;
+      end;
+    end;
+  end
+  ,'__class__',  haxe.ds.EnumValueMap
+)
+haxe.ds.EnumValueMap.__super__ = haxe.ds.BalancedTree
+setmetatable(haxe.ds.EnumValueMap.prototype,{__index=haxe.ds.BalancedTree.prototype})
+
+haxe.ds.IntMap.new = function() 
+  local self = _hx_new(haxe.ds.IntMap.prototype)
+  haxe.ds.IntMap.super(self)
+  return self
+end
+haxe.ds.IntMap.super = function(self) 
+  self.h = _hx_e();
+end
+haxe.ds.IntMap.__name__ = true
+haxe.ds.IntMap.__interfaces__ = {haxe.IMap}
+haxe.ds.IntMap.prototype = _hx_a(
+  'set', function(self,key,value) 
+    self.h[key] = value;
+  end,
+  'get', function(self,key) 
+    do return self.h[key] end
+  end,
+  'exists', function(self,key) 
+    local o = self.h;
+    local field = key;
+    if (o.__fields__ ~= nil) then 
+      do return o.__fields__[field] ~= nil end;
+    else
+      do return o[field] ~= nil end;
+    end;
+  end,
+  'remove', function(self,key) 
+    local o = self.h;
+    local field = key;
+    if (not ((function() 
+      local _hx_1
+      if (o.__fields__ ~= nil) then 
+      _hx_1 = o.__fields__[field] ~= nil; else 
+      _hx_1 = o[field] ~= nil; end
+      return _hx_1
+    end )())) then 
+      do return false end;
+    end;
+    Reflect.deleteField(self.h,key);
+    do return true end
+  end,
+  'keys', function(self) 
+    local _gthis = Reflect.fields(self.h);
+    local cur_length = 0;
+    local cur = _hx_o({__fields__={hasNext=true,next=true},hasNext=function() 
+      do return cur_length < _gthis.length end;
+    end,next=function() 
+      cur_length = cur_length + 1;
+      do return _gthis[cur_length - 1] end;
+    end});
+    do return _hx_o({__fields__={next=true,hasNext=true},next=function() 
+      local ret = cur:next();
+      do return ret end;
+    end,hasNext=function() 
+      do return cur:hasNext() end;
+    end}) end
+  end,
+  'iterator', function(self) 
+    local _gthis = self;
+    local it = self:keys();
+    do return _hx_o({__fields__={hasNext=true,next=true},hasNext=function() 
+      do return it:hasNext() end;
+    end,next=function() 
+      do return _gthis.h[it:next()] end;
+    end}) end
+  end,
+  'toString', function(self) 
+    local s_length;
+    local s_b = _hx_e();
+    s_length = 0;
+    local str = "{";
+    _G.table.insert(s_b,str);
+    s_length = s_length + str.length;
+    local it = self:keys();
+    local i = it;
+    while (i:hasNext()) do 
+      local i1 = i:next();
+      local str1 = Std.string(i1);
+      _G.table.insert(s_b,str1);
+      s_length = s_length + str1.length;
+      local str2 = " => ";
+      _G.table.insert(s_b,str2);
+      s_length = s_length + str2.length;
+      local str3 = Std.string(Std.string(self.h[i1]));
+      _G.table.insert(s_b,str3);
+      s_length = s_length + str3.length;
+      if (it:hasNext()) then 
+        local str4 = ", ";
+        _G.table.insert(s_b,str4);
+        s_length = s_length + str4.length;
+      end;
+      end;
+    local str5 = "}";
+    _G.table.insert(s_b,str5);
+    s_length = s_length + str5.length;
+    do return _G.table.concat(s_b) end
+  end
+  ,'__class__',  haxe.ds.IntMap
+)
+
+haxe.ds.ObjectMap.new = function() 
+  local self = _hx_new(haxe.ds.ObjectMap.prototype)
+  haxe.ds.ObjectMap.super(self)
+  return self
+end
+haxe.ds.ObjectMap.super = function(self) 
+  self.h = ({});
+  self.k = ({});
+end
+haxe.ds.ObjectMap.__name__ = true
+haxe.ds.ObjectMap.__interfaces__ = {haxe.IMap}
+haxe.ds.ObjectMap.prototype = _hx_a(
+  'set', function(self,key,value) 
+    self.h[key] = value;
+    self.k[key] = true;
+  end,
+  'get', function(self,key) 
+    do return self.h[key] end
+  end,
+  'exists', function(self,key) 
+    do return self.k[key] ~= nil end
+  end,
+  'remove', function(self,key) 
+    if (self.k[key] == nil) then 
+      do return false end;
+    end;
+    self.k[key] = nil;
+    self.h[key] = nil;
+    do return true end
+  end,
+  'keys', function(self) 
+    local _gthis = self;
+    local cur = next(self.h,nil);
+    do return _hx_o({__fields__={next=true,hasNext=true},next=function() 
+      local ret = cur;
+      cur = next(_gthis.k,cur);
+      do return ret end;
+    end,hasNext=function() 
+      do return cur ~= nil end;
+    end}) end
+  end,
+  'iterator', function(self) 
+    local _gthis = self;
+    local itr = self:keys();
+    do return _hx_o({__fields__={hasNext=true,next=true},hasNext=_hx_bind(itr,itr.hasNext),next=function() 
+      do return _gthis.h[itr:next()] end;
+    end}) end
+  end,
+  'toString', function(self) 
+    local s_length;
+    local s_b = _hx_e();
+    s_length = 0;
+    local str = "{";
+    _G.table.insert(s_b,str);
+    s_length = s_length + str.length;
+    local it = self:keys();
+    local i = it;
+    while (i:hasNext()) do 
+      local i1 = i:next();
+      local str1 = Std.string(i1);
+      _G.table.insert(s_b,str1);
+      s_length = s_length + str1.length;
+      local str2 = " => ";
+      _G.table.insert(s_b,str2);
+      s_length = s_length + str2.length;
+      local str3 = Std.string(Std.string(self.h[i1]));
+      _G.table.insert(s_b,str3);
+      s_length = s_length + str3.length;
+      if (it:hasNext()) then 
+        local str4 = ", ";
+        _G.table.insert(s_b,str4);
+        s_length = s_length + str4.length;
+      end;
+      end;
+    local str5 = "}";
+    _G.table.insert(s_b,str5);
+    s_length = s_length + str5.length;
+    do return _G.table.concat(s_b) end
+  end
+  ,'__class__',  haxe.ds.ObjectMap
+)
+
+haxe.ds.StringMap.new = function() 
+  local self = _hx_new(haxe.ds.StringMap.prototype)
+  haxe.ds.StringMap.super(self)
+  return self
+end
+haxe.ds.StringMap.super = function(self) 
+  self.v = {}
+  self.k = {}
+end
+haxe.ds.StringMap.__name__ = true
+haxe.ds.StringMap.__interfaces__ = {haxe.IMap}
+haxe.ds.StringMap.prototype = _hx_a(
+  'set', function(self,key,value) 
+    self.v[key] = value;
+    self.k[key] = true;
+  end,
+  'get', function(self,key) 
+    do return self.v[key] end
+  end,
+  'exists', function(self,key) 
+    do return (self.k[key] or false) end
+  end,
+  'remove', function(self,key) 
+    if (not self.k[key]) then 
+      do return false end;
+    end;
+    self.v[key] = nil;
+    self.k[key] = nil;
+    do return true end
+  end,
+  'keys', function(self) 
+    local cur = _hx_tab_array({ }, 0);
+    for _k,_v in pairs(self.k) do
+			if(_v)then cur:push(_k) end
+		end;
+    do return _hx_o({__fields__={next=true,hasNext=true},next=function() 
+      local ret = cur:pop();
+      do return ret end;
+    end,hasNext=function() 
+      do return cur.length > 0 end;
+    end}) end
+  end,
+  'iterator', function(self) 
+    local _gthis = self;
+    local it = self:keys();
+    do return _hx_o({__fields__={hasNext=true,next=true},hasNext=function() 
+      do return it:hasNext() end;
+    end,next=function() 
+      do return _gthis.v[it:next()] end;
+    end}) end
+  end,
+  'toString', function(self) 
+    local s_length;
+    local s_b = _hx_e();
+    s_length = 0;
+    local str = "{";
+    _G.table.insert(s_b,str);
+    s_length = s_length + str.length;
+    local it = self:keys();
+    local i = it;
+    while (i:hasNext()) do 
+      local i1 = i:next();
+      local str1 = Std.string(i1);
+      _G.table.insert(s_b,str1);
+      s_length = s_length + str1.length;
+      local str2 = " => ";
+      _G.table.insert(s_b,str2);
+      s_length = s_length + str2.length;
+      local str3 = Std.string(Std.string(self.v[i1]));
+      _G.table.insert(s_b,str3);
+      s_length = s_length + str3.length;
+      if (it:hasNext()) then 
+        local str4 = ", ";
+        _G.table.insert(s_b,str4);
+        s_length = s_length + str4.length;
+      end;
+      end;
+    local str5 = "}";
+    _G.table.insert(s_b,str5);
+    s_length = s_length + str5.length;
+    do return _G.table.concat(s_b) end
+  end
+  ,'__class__',  haxe.ds.StringMap
+)
+
 haxe.io.Eof.new = {}
+haxe.io.Eof.__name__ = true
 haxe.io.Eof.prototype = _hx_a(
   'toString', function(self) 
     do return "Eof" end
   end
+  ,'__class__',  haxe.io.Eof
 )
 
 lua.Boot.new = {}
+lua.Boot.__name__ = true
+lua.Boot.getClass = function(o) 
+  if (lua.Boot.__instanceof(o,Array)) then 
+    do return Array end;
+  else
+    local cl = o.__class__;
+    if (cl ~= nil) then 
+      do return cl end;
+    else
+      do return nil end;
+    end;
+  end;
+end
+lua.Boot.__instanceof = function(o,cl) 
+  if (cl == nil) then 
+    do return false end;
+  end;
+  local cl1 = cl;
+  if (cl1) == Array then 
+    do return lua.Boot.isArray(o) end;
+  elseif (cl1) == Bool then 
+    do return _G.type(o) == "boolean" end;
+  elseif (cl1) == Dynamic then 
+    do return true end;
+  elseif (cl1) == Float then 
+    do return _G.type(o) == "number" end;
+  elseif (cl1) == Int then 
+    if (_G.type(o) == "number") then 
+      do return _hx_bit_clamp(o) == o end;
+    else
+      do return false end;
+    end;
+  elseif (cl1) == String then 
+    do return _G.type(o) == "string" end;
+  elseif (cl1) == _G.table then 
+    do return _G.type(o) == "table" end;
+  elseif (cl1) == lua.Thread then 
+    do return _G.type(o) == "thread" end;
+  elseif (cl1) == lua.UserData then 
+    do return _G.type(o) == "userdata" end;else
+  if (((o ~= nil) and (_G.type(o) == "table")) and (_G.type(cl) == "table")) then 
+    if (lua.Boot.extendsOrImplements(lua.Boot.getClass(o),cl)) then 
+      do return true end;
+    end;
+    if ((function() 
+      local _hx_1
+      if (cl == Class) then 
+      _hx_1 = o.__name__ ~= nil; else 
+      _hx_1 = false; end
+      return _hx_1
+    end )()) then 
+      do return true end;
+    end;
+    if ((function() 
+      local _hx_2
+      if (cl == Enum) then 
+      _hx_2 = o.__ename__ ~= nil; else 
+      _hx_2 = false; end
+      return _hx_2
+    end )()) then 
+      do return true end;
+    end;
+    do return o.__enum__ == cl end;
+  else
+    do return false end;
+  end; end;
+end
 lua.Boot.isArray = function(o) 
   if (_G.type(o) == "table") then 
     if ((o.__enum__ == nil) and (_G.getmetatable(o) ~= nil)) then 
@@ -237,6 +1353,13 @@ lua.Boot.isArray = function(o)
     end;
   else
     do return false end;
+  end;
+end
+lua.Boot.__cast = function(o,t) 
+  if (lua.Boot.__instanceof(o,t)) then 
+    do return o end;
+  else
+    _G.error("Cannot cast " .. Std.string(o) .. " to " .. Std.string(t),0);
   end;
 end
 lua.Boot.printEnum = function(o,s) 
@@ -346,6 +1469,29 @@ lua.Boot.__string_rec = function(o,s)
     do return "<userdata>" end;else
   _G.error("Unknown Lua type",0); end;
 end
+lua.Boot.extendsOrImplements = function(cl1,cl2) 
+  if ((cl1 == nil) or (cl2 == nil)) then 
+    do return false end;
+  else
+    if (cl1 == cl2) then 
+      do return true end;
+    else
+      if (cl1.__interfaces__ ~= nil) then 
+        local intf = cl1.__interfaces__;
+        local _g1 = 1;
+        local _g = _hx_table.maxn(intf) + 1;
+        while (_g1 < _g) do 
+          _g1 = _g1 + 1;
+          local i = _g1 - 1;
+          if (lua.Boot.extendsOrImplements(intf[i],cl2)) then 
+            do return true end;
+          end;
+          end;
+      end;
+    end;
+  end;
+  do return lua.Boot.extendsOrImplements(cl1.__super__,cl2) end;
+end
 lua.Boot.fieldIterator = function(o) 
   local tbl = (function() 
     local _hx_1
@@ -370,6 +1516,31 @@ lua.Boot.fieldIterator = function(o)
     do return cur_val ~= nil end;
   end}) end;
 end
+
+lua.UserData.new = {}
+lua.UserData.__name__ = true
+
+lua.Thread.new = {}
+lua.Thread.__name__ = true
+_hx_bit_clamp = function(v) 
+  if v <= 2147483647 and v >= -2147483648 then
+    if v > 0 then return _G.math.floor(v)
+    else return _G.math.ceil(v)
+    end
+  end
+  if v > 2251798999999999 then v = v*2 end;
+  if (v ~= v or math.abs(v) == _G.math.huge) then return nil end
+  return _hx_bit.band(v, 2147483647 ) - math.abs(_hx_bit.band(v, 2147483648))
+end
+pcall(require, 'bit')
+if bit then
+  _hx_bit = bit
+elseif bit32 then
+  local _hx_bit_raw = bit32
+  _hx_bit = setmetatable({}, { __index = _hx_bit_raw });
+  _hx_bit.bnot = function(...) return _hx_bit_clamp(_hx_bit_raw.bnot(...)) end;
+  _hx_bit.bxor = function(...) return _hx_bit_clamp(_hx_bit_raw.bxor(...)) end;
+end
 local _hx_string_mt = _G.getmetatable('');
 String.__oldindex = _hx_string_mt.__index;
 _hx_string_mt.__index = String.__index;
@@ -380,7 +1551,39 @@ _hx_array_mt.__index = Array.prototype
 lua.Boot.hiddenFields = {__id__=true, hx__closures=true, super=true, prototype=true, __fields__=true, __ifields__=true, __class__=true, __properties__=true}
 do
 
+String.prototype.__class__ = String;
+String.__name__ = true;
+Array.__name__ = true;
+String.prototype.__class__ = String;
+String.__name__ = true;
+Array.__name__ = true;
+end
+_hx_bind = function(o,m)
+  if m == nil then return nil end;
+  local f;
+  if o._hx__closures == nil then
+    _G.rawset(o, '_hx__closures', {});
+  else 
+    f = o._hx__closures[m];
+  end
+  if (f == nil) then
+    f = function(...) return m(o, ...) end;
+    o._hx__closures[m] = f;
+  end
+  return f;
 end
 _hx_print = print or (function() end)
+_hx_table = {}
+_hx_table.pack = _G.table.pack or function(...)
+    return {...}
+end
+_hx_table.unpack = _G.table.unpack or _G.unpack
+_hx_table.maxn = _G.table.maxn or function(t)
+  local maxn=0;
+  for i in pairs(t) do
+    maxn=type(i)=='number'and i>maxn and i or maxn
+  end
+  return maxn
+end;
 TestBox.main()
 return _hx_exports
