@@ -94,8 +94,7 @@ class Space {
                 untyped tbl["parts"] = parts;
             }
         }
-
-        trace (tbl);
+                
         var res = untyped box.space[Name].create_index (name, tbl);
         return new Index (this, res.id);
     }

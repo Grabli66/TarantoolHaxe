@@ -58,6 +58,10 @@ Enum = _hx_e();
 local Array = _hx_e()
 local Box = _hx_e()
 local Convert = _hx_e()
+local Fiber = _hx_e()
+local _FiberChannel = {}
+_FiberChannel.FiberChannel_Impl_ = _hx_e()
+local FiberStatus = _hx_e()
 local Index = _hx_e()
 local IndexFieldType = _hx_e()
 local IndexType = _hx_e()
@@ -69,6 +73,8 @@ local String = _hx_e()
 local Std = _hx_e()
 local TestBox = _hx_e()
 local Type = _hx_e()
+local _Uuid = {}
+_Uuid.Uuid_Impl_ = _hx_e()
 local haxe = {}
 haxe.IMap = _hx_e()
 haxe.Log = _hx_e()
@@ -88,14 +94,7 @@ lua.Thread = _hx_e()
 
 local _hx_bind, _hx_bit, _hx_staticToInstance, _hx_funcToField, _hx_maxn, _hx_print, _hx_apply_self, _hx_box_mr, _hx_bit_clamp, _hx_table, _hx_bit_raw
 
-Array.new = function() 
-  local self = _hx_new(Array.prototype)
-  Array.super(self)
-  return self
-end
-Array.super = function(self) 
-  _hx_tab_array(self,0);
-end
+Array.new = {}
 Array.__name__ = true
 Array.prototype = _hx_a(
   'join', function(self,sep) 
@@ -255,20 +254,44 @@ Convert.DynamicToTable = function(data)
     do return tbl end;
   end;
 end
-Convert.FromTable = function(table) 
-  local res = Array.new();
-  _G.table.foreach(table,function(i,it) 
-    local typ = type(it);
-    if (typ == "cdata") then 
-      local tab = it:totable();
-      local tmp = Convert.FromTable(tab);
-      res:push(tmp);
-    else
-      res:push(it);
-    end;
-  end);
-  do return res end;
+
+Fiber.new = {}
+Fiber.__name__ = true
+Fiber.Sleep = function(seconds) 
+  Fiber.Module.sleep(seconds);
 end
+Fiber.Create = function(call,channel) 
+  local fibr = Fiber.Module.create(function() 
+    Fiber.Sleep(0);
+    call(channel);
+  end);
+  do return fibr end;
+end
+Fiber.prototype = _hx_a(
+  
+  '__class__',  Fiber
+)
+
+_FiberChannel.FiberChannel_Impl_.new = {}
+_FiberChannel.FiberChannel_Impl_.__name__ = true
+_FiberChannel.FiberChannel_Impl_._new = function() 
+  local this1 = Fiber.Module.channel();
+  do return this1 end;
+end
+_FiberChannel.FiberChannel_Impl_.Put = function(this1,data,timeout) 
+  this1:put(data);
+end
+_FiberChannel.FiberChannel_Impl_.Get = function(this1,timeout) 
+  do return this1:get() end;
+end
+_hxClasses["FiberStatus"] = { __ename__ = true, __constructs__ = _hx_tab_array({[0]="dead","suspended","running"},3)}
+FiberStatus = _hxClasses["FiberStatus"];
+FiberStatus.dead = _hx_tab_array({[0]="dead",0,__enum__ = FiberStatus},2)
+
+FiberStatus.suspended = _hx_tab_array({[0]="suspended",1,__enum__ = FiberStatus},2)
+
+FiberStatus.running = _hx_tab_array({[0]="running",2,__enum__ = FiberStatus},2)
+
 
 Index.new = function(parent,id) 
   local self = _hx_new(Index.prototype)
@@ -505,23 +528,12 @@ Space.prototype = _hx_a(
         tbl.parts = parts;
       end;
     end;
-    haxe.Log.trace(tbl,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="Space.hx",lineNumber=98,className="Space",methodName="CreateIndex"}));
     local res = box.space[self.Name]:create_index(name,tbl);
     do return Index.new(self,res.id) end
   end,
-  'AutoIncrement', function(self,data) 
+  'Insert', function(self,data) 
     local tuple = Convert.DynamicToTable(data);
-    box.space[self.Name]:auto_increment(tuple);
-  end,
-  'Select', function(self,keys) 
-    local table;
-    if (keys ~= nil) then 
-      local keys1 = Convert.ConvertDynamic(keys);
-      table = box.space[self.Name]:select(keys1);
-    else
-      table = box.space[self.Name]:select();
-    end;
-    do return Convert.FromTable(table) end
+    box.space[self.Name]:insert(tuple);
   end
   ,'__class__',  Space
 )
@@ -573,20 +585,27 @@ TestBox.main = function()
   Box.Cfg(_hx_o({__fields__={listen=true,slab_alloc_arena=true,work_dir=true,wal_dir=true},listen=3301,slab_alloc_arena=0.1,work_dir="./snaps",wal_dir="."}));
   Box.Once("first",function() 
     local space = Space.Create("test",_hx_o({__fields__={id=true},id=1}));
-    space:CreateIndex("primary",_hx_o({__fields__={unique=true,type=true,parts=true},unique=true,type=IndexType.tree,parts=_hx_tab_array({[0]=_hx_o({__fields__={field_no=true,type=true},field_no=1,type=IndexFieldType.unsigned}), _hx_o({__fields__={field_no=true,type=true},field_no=2,type=IndexFieldType.string}) }, 2)}));
-    space:AutoIncrement(_hx_tab_array({[0]="dd", 34, 4, 5 }, 4));
-    space:AutoIncrement(_hx_tab_array({[0]="dd", 35, 4, 5 }, 4));
-    space:AutoIncrement(_hx_tab_array({[0]="ff", 44, 4, 5 }, 4));
-    space:AutoIncrement(_hx_tab_array({[0]="ss", 12, 5, 8 }, 4));
+    space:CreateIndex("primary",_hx_o({__fields__={unique=true,type=true,parts=true},unique=true,type=IndexType.tree,parts=_hx_tab_array({[0]=_hx_o({__fields__={field_no=true,type=true},field_no=1,type=IndexFieldType.string}) }, 1)}));
+    space:Insert(_hx_tab_array({[0]=_Uuid.Uuid_Impl_._module.str(), 34, 4, 5 }, 4));
+    space:Insert(_hx_tab_array({[0]=_Uuid.Uuid_Impl_._module.str(), 35, 4, 5 }, 4));
+    space:Insert(_hx_tab_array({[0]=_Uuid.Uuid_Impl_._module.str(), 44, 4, 5 }, 4));
+    space:Insert(_hx_tab_array({[0]=_Uuid.Uuid_Impl_._module.str(), 12, 5, 8 }, 4));
   end);
-  local space1 = Space.Get("test");
-  local dat = space1:Select(_hx_tab_array({[0]=1, "dd" }, 2));
-  local _g = 0;
-  while (_g < dat.length) do 
-    local d = dat[_g];
-    _g = _g + 1;
-    haxe.Log.trace(d,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="TestBox.hx",lineNumber=36,className="TestBox",methodName="main"}));
-    end;
+  local chan = _FiberChannel.FiberChannel_Impl_._new();
+  local fiber = Fiber.Create(function(ch) 
+    local space1 = Space.Get("test");
+    while (true) do 
+      local d = _FiberChannel.FiberChannel_Impl_.Get(ch);
+      haxe.Log.trace(d.good,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="TestBox.hx",lineNumber=39,className="TestBox",methodName="main"}));
+      Fiber.Sleep(1);
+      end;
+  end,chan);
+  local fiber2 = Fiber.Create(function(ch1) 
+    while (true) do 
+      _FiberChannel.FiberChannel_Impl_.Put(ch1,_hx_o({__fields__={good=true},good=42}));
+      Fiber.Sleep(5);
+      end;
+  end,chan);
 end
 
 Type.new = {}
@@ -606,6 +625,9 @@ Type.getClass = function(o)
     end;
   end;
 end
+
+_Uuid.Uuid_Impl_.new = {}
+_Uuid.Uuid_Impl_.__name__ = true
 
 haxe.IMap.new = {}
 haxe.IMap.__name__ = true
@@ -1551,12 +1573,16 @@ _hx_array_mt.__index = Array.prototype
 lua.Boot.hiddenFields = {__id__=true, hx__closures=true, super=true, prototype=true, __fields__=true, __ifields__=true, __class__=true, __properties__=true}
 do
 
+Fiber.Module = require("fiber");
 String.prototype.__class__ = String;
 String.__name__ = true;
 Array.__name__ = true;
+_Uuid.Uuid_Impl_._module = require("uuid");
+Fiber.Module = require("fiber");
 String.prototype.__class__ = String;
 String.__name__ = true;
 Array.__name__ = true;
+_Uuid.Uuid_Impl_._module = require("uuid");
 end
 _hx_bind = function(o,m)
   if m == nil then return nil end;

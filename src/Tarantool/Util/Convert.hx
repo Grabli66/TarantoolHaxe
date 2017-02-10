@@ -91,7 +91,7 @@ class Convert {
             if (typ == 'cdata') {
                 var tab = untyped it.totable ();
                 res.push (FromTable (tab));
-            } else {
+            } else {                
                 res.push (it);
             }
         });

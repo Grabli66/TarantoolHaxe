@@ -4,6 +4,9 @@
 -cp src/Tarantool/Space
 -cp src/Tarantool/Index
 -cp src/Tarantool/Util
+-cp src/Tarantool/Uuid
+-cp src/Tarantool/Log
+-cp src/Tarantool/Fiber
 -D lua_jit
 -dce full
 -main TestBox

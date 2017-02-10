@@ -72,4 +72,30 @@ typedef ConfigOptions = {
         Size of the smallest allocation unit. It can be decreased if most of the tuples are very small. The value must be between 8 and 1048280 inclusive.
     **/
     ?slab_alloc_minimal : Int,
+
+
+
+    /**
+        By default, the log is sent to the standard error stream (stderr). 
+        If logger is specified, the log is sent to a file, or to a pipe, or to the system logger.
+    **/
+    ?logger : String,
+
+    /**
+        By setting log_level, one can enable logging of all classes below or equal to the given level. 
+        Tarantool prints its logs to the standard error stream by default, but this can be changed with the logger configuration paramete
+    **/
+    ?log_level : Int,
+
+    /**
+        If logger_nonblock equals true, Tarantool does not block on the log file descriptor when it’s not ready for write, and drops the message instead. 
+        If log_level is high, and a lot of messages go to the log file, setting logger_nonblock to true may improve logging performance at the cost of some log messages getting lost.
+    **/
+    ?logger_nonblock : Bool,
+
+    /**
+        If processing a request takes longer than the given value (in seconds), warn about it in the log. 
+        Has effect only if log_level is more than or equal to 4 (WARNING).
+    **/
+    ?too_long_threshold : Float
 }
