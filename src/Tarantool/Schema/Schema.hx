@@ -1,0 +1,6 @@
+/**
+    Schema structure
+**/
+class Schema {
+    
+}

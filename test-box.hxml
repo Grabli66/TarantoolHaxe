@@ -1,0 +1,10 @@
+-cp test
+-cp src/Tarantool
+-cp src/Tarantool/Box
+-cp src/Tarantool/Space
+-cp src/Tarantool/Index
+-cp src/Tarantool/Util
+-D lua_jit
+-dce full
+-main TestBox
+-lua out/test-box.lua

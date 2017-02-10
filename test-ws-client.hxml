@@ -1,0 +1,8 @@
+-cp test
+-cp src/Tarantool
+-cp src/Tarantool/Box
+-cp src/Tarantool/Socket
+-cp src/WebSocket
+-dce full
+-main TestWsClient
+-js out/test-ws-client.js

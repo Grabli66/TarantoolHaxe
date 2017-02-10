@@ -1,0 +1,9 @@
+-cp test
+-cp src/Tarantool
+-cp src/Tarantool/Box
+-cp src/Tarantool/Socket
+-cp src/WebSocket
+-D lua_jit
+-dce full
+-main TestWsServer
+-lua out/test-ws-server.lua
