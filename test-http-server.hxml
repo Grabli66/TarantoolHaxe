@@ -1,0 +1,9 @@
+-cp test
+-cp src/Tarantool
+-cp src/Tarantool/Socket
+-cp src/Http
+-cp src/Http/Handlers
+-D lua_jit
+-dce full
+-main TestHttpServer
+-lua out/test-http-server.lua

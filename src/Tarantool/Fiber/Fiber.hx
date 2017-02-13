@@ -47,9 +47,9 @@ abstract Fiber (Dynamic) {
         Constructor
     **/
     private function new (call : FiberChannel -> Void, ?channel : FiberChannel) {
-    /*    this = untyped Module["create"] (function () {
+        this = untyped Module["create"] (function () {
             Fiber.Sleep (0);
             call (channel);            
-        });                        */
+        });
     }    
 }

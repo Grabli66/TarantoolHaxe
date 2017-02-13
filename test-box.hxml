@@ -7,6 +7,8 @@
 -cp src/Tarantool/Uuid
 -cp src/Tarantool/Log
 -cp src/Tarantool/Fiber
+-cp src/Http
+-cp src/Http/Handlers
 -D lua_jit
 -dce full
 -main TestBox

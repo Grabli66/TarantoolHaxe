@@ -58,7 +58,8 @@ Enum = _hx_e();
 local Array = _hx_e()
 local Box = _hx_e()
 local Convert = _hx_e()
-local Fiber = _hx_e()
+local _Fiber = {}
+_Fiber.Fiber_Impl_ = _hx_e()
 local _FiberChannel = {}
 _FiberChannel.FiberChannel_Impl_ = _hx_e()
 local FiberStatus = _hx_e()
@@ -255,27 +256,23 @@ Convert.DynamicToTable = function(data)
   end;
 end
 
-Fiber.new = {}
-Fiber.__name__ = true
-Fiber.Sleep = function(seconds) 
-  Fiber.Module.sleep(seconds);
+_Fiber.Fiber_Impl_.new = {}
+_Fiber.Fiber_Impl_.__name__ = true
+_Fiber.Fiber_Impl_.Sleep = function(seconds) 
+  _Fiber.Fiber_Impl_.Module.sleep(seconds);
 end
-Fiber.Create = function(call,channel) 
-  local fibr = Fiber.Module.create(function() 
-    Fiber.Sleep(0);
+_Fiber.Fiber_Impl_.Create = function(call,channel) 
+  local fibr = _Fiber.Fiber_Impl_.Module.create(function() 
+    _Fiber.Fiber_Impl_.Sleep(0);
     call(channel);
   end);
   do return fibr end;
 end
-Fiber.prototype = _hx_a(
-  
-  '__class__',  Fiber
-)
 
 _FiberChannel.FiberChannel_Impl_.new = {}
 _FiberChannel.FiberChannel_Impl_.__name__ = true
 _FiberChannel.FiberChannel_Impl_._new = function() 
-  local this1 = Fiber.Module.channel();
+  local this1 = _Fiber.Fiber_Impl_.Module.channel();
   do return this1 end;
 end
 _FiberChannel.FiberChannel_Impl_.Put = function(this1,data,timeout) 
@@ -592,18 +589,18 @@ TestBox.main = function()
     space:Insert(_hx_tab_array({[0]=_Uuid.Uuid_Impl_._module.str(), 12, 5, 8 }, 4));
   end);
   local chan = _FiberChannel.FiberChannel_Impl_._new();
-  local fiber = Fiber.Create(function(ch) 
+  local fiber = _Fiber.Fiber_Impl_.Create(function(ch) 
     local space1 = Space.Get("test");
     while (true) do 
       local d = _FiberChannel.FiberChannel_Impl_.Get(ch);
       haxe.Log.trace(d.good,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="TestBox.hx",lineNumber=39,className="TestBox",methodName="main"}));
-      Fiber.Sleep(1);
+      _Fiber.Fiber_Impl_.Sleep(1);
       end;
   end,chan);
-  local fiber2 = Fiber.Create(function(ch1) 
+  local fiber2 = _Fiber.Fiber_Impl_.Create(function(ch1) 
     while (true) do 
       _FiberChannel.FiberChannel_Impl_.Put(ch1,_hx_o({__fields__={good=true},good=42}));
-      Fiber.Sleep(5);
+      _Fiber.Fiber_Impl_.Sleep(5);
       end;
   end,chan);
 end
@@ -1573,12 +1570,12 @@ _hx_array_mt.__index = Array.prototype
 lua.Boot.hiddenFields = {__id__=true, hx__closures=true, super=true, prototype=true, __fields__=true, __ifields__=true, __class__=true, __properties__=true}
 do
 
-Fiber.Module = require("fiber");
+_Fiber.Fiber_Impl_.Module = require("fiber");
 String.prototype.__class__ = String;
 String.__name__ = true;
 Array.__name__ = true;
 _Uuid.Uuid_Impl_._module = require("uuid");
-Fiber.Module = require("fiber");
+_Fiber.Fiber_Impl_.Module = require("fiber");
 String.prototype.__class__ = String;
 String.__name__ = true;
 Array.__name__ = true;
