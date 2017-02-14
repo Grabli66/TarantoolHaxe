@@ -3,9 +3,21 @@
 **/
 class HttpHandler implements IHandler {
     /**
+        On request callback
+    **/
+    private var _onRequest : HttpContext -> Void;
+
+    /**
         Constructor
     **/
     public function new () {        
+    }
+
+    /**
+        Set callback on client request
+    **/
+    public function OnRequest (call : HttpContext -> Void) : Void {
+        _onRequest = call;
     }
 
     /**
@@ -19,9 +31,9 @@ class HttpHandler implements IHandler {
         Process request
     **/
     public function Process (context : HttpContext) : Void {
-        context.Response.WriteString ("HTTP/1.1 200 OK\n");
-        context.Response.WriteString ("Content-Length: 4");
-        context.Response.WriteString ("\n\n");
-        context.Response.WriteString ("GOOD\n");
+        if (_onRequest != null) {
+            _onRequest (context);
+            context.Response.Close ();
+        }                
     }
 }

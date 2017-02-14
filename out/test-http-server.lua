@@ -67,6 +67,7 @@ local HttpResponse = _hx_e()
 local HttpServer = _hx_e()
 local IReadChannel = _hx_e()
 local IRWChannel = _hx_e()
+local Math = _hx_e()
 local Peer = _hx_e()
 local Reflect = _hx_e()
 local String = _hx_e()
@@ -82,9 +83,13 @@ haxe.ds = {}
 haxe.ds.StringMap = _hx_e()
 haxe.io = {}
 haxe.io.Bytes = _hx_e()
+haxe.io.BytesBuffer = _hx_e()
 haxe.io.Eof = _hx_e()
+haxe.io.Error = _hx_e()
 local lua = {}
 lua.Boot = _hx_e()
+lua.UserData = _hx_e()
+lua.Thread = _hx_e()
 
 local _hx_bind, _hx_bit, _hx_staticToInstance, _hx_funcToField, _hx_maxn, _hx_print, _hx_apply_self, _hx_box_mr, _hx_bit_clamp, _hx_table, _hx_bit_raw
 
@@ -129,10 +134,11 @@ Array.prototype = _hx_a(
       do return _gthis[cur_length - 1] end;
     end}) end
   end
+  ,'__class__',  Array
 )
 
 HttpContext.new = function(request,response) 
-  local self = _hx_new()
+  local self = _hx_new(HttpContext.prototype)
   HttpContext.super(self,request,response)
   return self
 end
@@ -141,9 +147,17 @@ HttpContext.super = function(self,request,response)
   self.Response = response;
 end
 HttpContext.__name__ = true
+HttpContext.prototype = _hx_a(
+  
+  '__class__',  HttpContext
+)
 
 IHandler.new = {}
 IHandler.__name__ = true
+IHandler.prototype = _hx_a(
+  
+  '__class__',  IHandler
+)
 
 HttpHandler.new = function() 
   local self = _hx_new(HttpHandler.prototype)
@@ -155,15 +169,19 @@ end
 HttpHandler.__name__ = true
 HttpHandler.__interfaces__ = {IHandler}
 HttpHandler.prototype = _hx_a(
+  'OnRequest', function(self,call) 
+    self._onRequest = _hx_funcToField(call);
+  end,
   'CanProcess', function(self,request) 
     do return true end
   end,
   'Process', function(self,context) 
-    context.Response:WriteString("HTTP/1.1 200 OK\n");
-    context.Response:WriteString("Content-Length: 4");
-    context.Response:WriteString("\n\n");
-    context.Response:WriteString("GOOD\n");
+    if (self._onRequest ~= nil) then 
+      self:_onRequest(context);
+      context.Response:Close();
+    end;
   end
+  ,'__class__',  HttpHandler
 )
 _hxClasses["HttpMethod"] = { __ename__ = true, __constructs__ = _hx_tab_array({[0]="get","post","put","delete"},4)}
 HttpMethod = _hxClasses["HttpMethod"];
@@ -236,14 +254,23 @@ HttpRequest.prototype = _hx_a(
       local tmp = this3.v["Transfer-Encoding"] == "chunked";
     end;
   end
+  ,'__class__',  HttpRequest
 )
 
 IChannel.new = {}
 IChannel.__name__ = true
+IChannel.prototype = _hx_a(
+  
+  '__class__',  IChannel
+)
 
 IWriteChannel.new = {}
 IWriteChannel.__name__ = true
 IWriteChannel.__interfaces__ = {IChannel}
+IWriteChannel.prototype = _hx_a(
+  
+  '__class__',  IWriteChannel
+)
 
 HttpResponse.new = function(channel) 
   local self = _hx_new(HttpResponse.prototype)
@@ -252,15 +279,49 @@ HttpResponse.new = function(channel)
 end
 HttpResponse.super = function(self,channel) 
   self._channel = channel;
+  self._buffer = haxe.io.BytesBuffer.new();
 end
 HttpResponse.__name__ = true
 HttpResponse.__interfaces__ = {IWriteChannel}
 HttpResponse.prototype = _hx_a(
+  'Write', function(self,data) 
+    local _this = self._buffer;
+    local len = data.length;
+    if ((len < 0) or (len > data.length)) then 
+      _G.error(haxe.io.Error.OutsideBounds,0);
+    end;
+    local b1 = _this.b;
+    local b2 = data.b;
+    local _g1 = 0;
+    local _g = len;
+    while (_g1 < _g) do 
+      _g1 = _g1 + 1;
+      local i = _g1 - 1;
+      _this.b:push(b2[i]);
+      end;
+    do return data.length end
+  end,
   'WriteString', function(self,data) 
-    do return self._channel:WriteString(data) end
+    local _this = self._buffer;
+    local src = haxe.io.Bytes.ofString(data);
+    local b1 = _this.b;
+    local b2 = src.b;
+    local _g1 = 0;
+    local _g = src.length;
+    while (_g1 < _g) do 
+      _g1 = _g1 + 1;
+      local i = _g1 - 1;
+      _this.b:push(b2[i]);
+      end;
+    do return data.length end
   end,
   'Close', function(self) 
+    self._channel:WriteString("HTTP/1.1 200 OK\n");
+    self._channel:WriteString("Content-Length: " .. self._buffer.b.length);
+    self._channel:WriteString("\n\n");
+    self._channel:Write(self._buffer:getBytes());
   end
+  ,'__class__',  HttpResponse
 )
 
 HttpServer.new = function() 
@@ -271,20 +332,12 @@ end
 HttpServer.super = function(self) 
   self._socket = TcpSocket.new();
   self._handlers = Array.new();
+  self:AddDefaultHandlers();
 end
 HttpServer.__name__ = true
 HttpServer.prototype = _hx_a(
-  'AddHandler', function(self,handler) 
-    self._handlers:push(handler);
-  end,
-  'Bind', function(self,host,port) 
-    local _gthis = self;
-    if (self._handlers.length < 1) then 
-      _G.error("No handlers",0);
-    end;
-    self._socket:Bind(host,port,function(p,c) 
-      _gthis:ProcessClient(p,c);
-    end);
+  'AddDefaultHandlers', function(self) 
+    self:AddHandler(HttpHandler.new());
   end,
   'ProcessClient', function(self,peer,channel) 
     local _hx_expected_result = {}
@@ -308,28 +361,59 @@ HttpServer.prototype = _hx_a(
      if not _hx_status then 
       local _hx_1 = _hx_result
       local e = _hx_1
-      haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="HttpServer.hx",lineNumber=56,className="HttpServer",methodName="ProcessClient"}));
+      haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="HttpServer.hx",lineNumber=37,className="HttpServer",methodName="ProcessClient"}));
       channel:Close();
      elseif _hx_result ~= _hx_expected_result then return _hx_result end;
+  end,
+  'AddHandler', function(self,handler) 
+    self._handlers:push(handler);
+  end,
+  'Bind', function(self,host,port) 
+    local _gthis = self;
+    if (self._handlers.length < 1) then 
+      _G.error("No handlers",0);
+    end;
+    self._socket:Bind(host,port,function(p,c) 
+      _gthis:ProcessClient(p,c);
+    end);
+  end,
+  'OnRequest', function(self,call) 
+    local h = lua.Boot.__cast(self._handlers[0] , HttpHandler);
+    h:OnRequest(call);
   end
+  ,'__class__',  HttpServer
 )
 
 IReadChannel.new = {}
 IReadChannel.__name__ = true
 IReadChannel.__interfaces__ = {IChannel}
+IReadChannel.prototype = _hx_a(
+  
+  '__class__',  IReadChannel
+)
 
 IRWChannel.new = {}
 IRWChannel.__name__ = true
 IRWChannel.__interfaces__ = {IWriteChannel,IReadChannel}
 
+Math.new = {}
+Math.__name__ = true
+Math.isNaN = function(f) 
+  do return f ~= f end;
+end
+
 Peer.new = function() 
-  local self = _hx_new()
+  local self = _hx_new(Peer.prototype)
   Peer.super(self)
   return self
 end
 Peer.super = function(self) 
 end
 Peer.__name__ = true
+Peer.prototype = _hx_a(
+  
+  '__class__',  Peer
+)
 
 Reflect.new = {}
 Reflect.__name__ = true
@@ -451,6 +535,7 @@ String.prototype = _hx_a(
     end;
     do return _G.string.sub(self,pos + 1,pos + len) end
   end
+  ,'__class__',  String
 )
 
 Std.new = {}
@@ -541,6 +626,10 @@ TcpSocket.prototype = _hx_a(
     end;
     do return haxe.io.Bytes.ofString(res) end
   end,
+  'Write', function(self,data) 
+    local s = data:toString();
+    do return self._sock:write(s) end
+  end,
   'WriteString', function(self,data) 
     do return self._sock:write(data) end
   end,
@@ -563,13 +652,17 @@ TcpSocket.prototype = _hx_a(
       handler(tmp,TcpSocket.new(s));
     end);
   end
+  ,'__class__',  TcpSocket
 )
 
 TestHttpServer.new = {}
 TestHttpServer.__name__ = true
 TestHttpServer.main = function() 
   local httpServer = HttpServer.new();
-  httpServer:AddHandler(HttpHandler.new());
+  httpServer:OnRequest(function(c) 
+    c.Response:WriteString("<h1>Привет ебучий мир!!!</h1>");
+    c.Response:WriteString("<p>Говножопосрань</p>");
+  end);
   httpServer:Bind("*",8082);
 end
 
@@ -632,7 +725,7 @@ haxe.Log.trace = function(v,infos)
 end
 
 haxe.ds.StringMap.new = function() 
-  local self = _hx_new()
+  local self = _hx_new(haxe.ds.StringMap.prototype)
   haxe.ds.StringMap.super(self)
   return self
 end
@@ -642,9 +735,13 @@ haxe.ds.StringMap.super = function(self)
 end
 haxe.ds.StringMap.__name__ = true
 haxe.ds.StringMap.__interfaces__ = {haxe.IMap}
+haxe.ds.StringMap.prototype = _hx_a(
+  
+  '__class__',  haxe.ds.StringMap
+)
 
 haxe.io.Bytes.new = function(length,b) 
-  local self = _hx_new()
+  local self = _hx_new(haxe.io.Bytes.prototype)
   haxe.io.Bytes.super(self,length,b)
   return self
 end
@@ -665,6 +762,61 @@ haxe.io.Bytes.ofString = function(s)
   local bytes = _g;
   do return haxe.io.Bytes.new(bytes.length,bytes) end;
 end
+haxe.io.Bytes.prototype = _hx_a(
+  'getString', function(self,pos,len) 
+    if (((pos < 0) or (len < 0)) or ((pos + len) > self.length)) then 
+      _G.error(haxe.io.Error.OutsideBounds,0);
+    end;
+    local b = self.b.length;
+    local begin = lua.Boot.__cast((function() 
+      local _hx_1
+      if (Math.isNaN(pos) or Math.isNaN(b)) then 
+      _hx_1 = (0/0); else 
+      _hx_1 = _G.math.min(pos,b); end
+      return _hx_1
+    end )() , Int);
+    local a = pos + len;
+    local b1 = self.b.length;
+    local _end = lua.Boot.__cast((function() 
+      local _hx_2
+      if (Math.isNaN(a) or Math.isNaN(b1)) then 
+      _hx_2 = (0/0); else 
+      _hx_2 = _G.math.min(a,b1); end
+      return _hx_2
+    end )() , Int);
+    local _g = _hx_tab_array({ }, 0);
+    local _g2 = begin;
+    local _g1 = _end;
+    while (_g2 < _g1) do 
+      _g2 = _g2 + 1;
+      local i = _g2 - 1;
+      _g:push(_G.string.char(self.b[i]));
+      end;
+    do return _g:join("") end
+  end,
+  'toString', function(self) 
+    do return self:getString(0,self.length) end
+  end
+  ,'__class__',  haxe.io.Bytes
+)
+
+haxe.io.BytesBuffer.new = function() 
+  local self = _hx_new(haxe.io.BytesBuffer.prototype)
+  haxe.io.BytesBuffer.super(self)
+  return self
+end
+haxe.io.BytesBuffer.super = function(self) 
+  self.b = Array.new();
+end
+haxe.io.BytesBuffer.__name__ = true
+haxe.io.BytesBuffer.prototype = _hx_a(
+  'getBytes', function(self) 
+    local bytes = haxe.io.Bytes.new(self.b.length,self.b);
+    self.b = nil;
+    do return bytes end
+  end
+  ,'__class__',  haxe.io.BytesBuffer
+)
 
 haxe.io.Eof.new = {}
 haxe.io.Eof.__name__ = true
@@ -672,10 +824,86 @@ haxe.io.Eof.prototype = _hx_a(
   'toString', function(self) 
     do return "Eof" end
   end
+  ,'__class__',  haxe.io.Eof
 )
+_hxClasses["haxe.io.Error"] = { __ename__ = true, __constructs__ = _hx_tab_array({[0]="Blocked","Overflow","OutsideBounds","Custom"},4)}
+haxe.io.Error = _hxClasses["haxe.io.Error"];
+haxe.io.Error.Blocked = _hx_tab_array({[0]="Blocked",0,__enum__ = haxe.io.Error},2)
+
+haxe.io.Error.Overflow = _hx_tab_array({[0]="Overflow",1,__enum__ = haxe.io.Error},2)
+
+haxe.io.Error.OutsideBounds = _hx_tab_array({[0]="OutsideBounds",2,__enum__ = haxe.io.Error},2)
+
+haxe.io.Error.Custom = function(e) local _x = _hx_tab_array({[0]="Custom",3,e,__enum__=haxe.io.Error}, 3); return _x; end 
 
 lua.Boot.new = {}
 lua.Boot.__name__ = true
+lua.Boot.getClass = function(o) 
+  if (lua.Boot.__instanceof(o,Array)) then 
+    do return Array end;
+  else
+    local cl = o.__class__;
+    if (cl ~= nil) then 
+      do return cl end;
+    else
+      do return nil end;
+    end;
+  end;
+end
+lua.Boot.__instanceof = function(o,cl) 
+  if (cl == nil) then 
+    do return false end;
+  end;
+  local cl1 = cl;
+  if (cl1) == Array then 
+    do return lua.Boot.isArray(o) end;
+  elseif (cl1) == Bool then 
+    do return _G.type(o) == "boolean" end;
+  elseif (cl1) == Dynamic then 
+    do return true end;
+  elseif (cl1) == Float then 
+    do return _G.type(o) == "number" end;
+  elseif (cl1) == Int then 
+    if (_G.type(o) == "number") then 
+      do return _hx_bit_clamp(o) == o end;
+    else
+      do return false end;
+    end;
+  elseif (cl1) == String then 
+    do return _G.type(o) == "string" end;
+  elseif (cl1) == _G.table then 
+    do return _G.type(o) == "table" end;
+  elseif (cl1) == lua.Thread then 
+    do return _G.type(o) == "thread" end;
+  elseif (cl1) == lua.UserData then 
+    do return _G.type(o) == "userdata" end;else
+  if (((o ~= nil) and (_G.type(o) == "table")) and (_G.type(cl) == "table")) then 
+    if (lua.Boot.extendsOrImplements(lua.Boot.getClass(o),cl)) then 
+      do return true end;
+    end;
+    if ((function() 
+      local _hx_1
+      if (cl == Class) then 
+      _hx_1 = o.__name__ ~= nil; else 
+      _hx_1 = false; end
+      return _hx_1
+    end )()) then 
+      do return true end;
+    end;
+    if ((function() 
+      local _hx_2
+      if (cl == Enum) then 
+      _hx_2 = o.__ename__ ~= nil; else 
+      _hx_2 = false; end
+      return _hx_2
+    end )()) then 
+      do return true end;
+    end;
+    do return o.__enum__ == cl end;
+  else
+    do return false end;
+  end; end;
+end
 lua.Boot.isArray = function(o) 
   if (_G.type(o) == "table") then 
     if ((o.__enum__ == nil) and (_G.getmetatable(o) ~= nil)) then 
@@ -685,6 +913,13 @@ lua.Boot.isArray = function(o)
     end;
   else
     do return false end;
+  end;
+end
+lua.Boot.__cast = function(o,t) 
+  if (lua.Boot.__instanceof(o,t)) then 
+    do return o end;
+  else
+    _G.error("Cannot cast " .. Std.string(o) .. " to " .. Std.string(t),0);
   end;
 end
 lua.Boot.printEnum = function(o,s) 
@@ -794,6 +1029,29 @@ lua.Boot.__string_rec = function(o,s)
     do return "<userdata>" end;else
   _G.error("Unknown Lua type",0); end;
 end
+lua.Boot.extendsOrImplements = function(cl1,cl2) 
+  if ((cl1 == nil) or (cl2 == nil)) then 
+    do return false end;
+  else
+    if (cl1 == cl2) then 
+      do return true end;
+    else
+      if (cl1.__interfaces__ ~= nil) then 
+        local intf = cl1.__interfaces__;
+        local _g1 = 1;
+        local _g = _hx_table.maxn(intf) + 1;
+        while (_g1 < _g) do 
+          _g1 = _g1 + 1;
+          local i = _g1 - 1;
+          if (lua.Boot.extendsOrImplements(intf[i],cl2)) then 
+            do return true end;
+          end;
+          end;
+      end;
+    end;
+  end;
+  do return lua.Boot.extendsOrImplements(cl1.__super__,cl2) end;
+end
 lua.Boot.fieldIterator = function(o) 
   local tbl = (function() 
     local _hx_1
@@ -818,6 +1076,31 @@ lua.Boot.fieldIterator = function(o)
     do return cur_val ~= nil end;
   end}) end;
 end
+
+lua.UserData.new = {}
+lua.UserData.__name__ = true
+
+lua.Thread.new = {}
+lua.Thread.__name__ = true
+_hx_bit_clamp = function(v) 
+  if v <= 2147483647 and v >= -2147483648 then
+    if v > 0 then return _G.math.floor(v)
+    else return _G.math.ceil(v)
+    end
+  end
+  if v > 2251798999999999 then v = v*2 end;
+  if (v ~= v or math.abs(v) == _G.math.huge) then return nil end
+  return _hx_bit.band(v, 2147483647 ) - math.abs(_hx_bit.band(v, 2147483648))
+end
+pcall(require, 'bit')
+if bit then
+  _hx_bit = bit
+elseif bit32 then
+  local _hx_bit_raw = bit32
+  _hx_bit = setmetatable({}, { __index = _hx_bit_raw });
+  _hx_bit.bnot = function(...) return _hx_bit_clamp(_hx_bit_raw.bnot(...)) end;
+  _hx_bit.bxor = function(...) return _hx_bit_clamp(_hx_bit_raw.bxor(...)) end;
+end
 local _hx_string_mt = _G.getmetatable('');
 String.__oldindex = _hx_string_mt.__index;
 _hx_string_mt.__index = String.__index;
@@ -828,10 +1111,21 @@ _hx_array_mt.__index = Array.prototype
 lua.Boot.hiddenFields = {__id__=true, hx__closures=true, super=true, prototype=true, __fields__=true, __ifields__=true, __class__=true, __properties__=true}
 do
 
+String.prototype.__class__ = String;
 String.__name__ = true;
 Array.__name__ = true;
+String.prototype.__class__ = String;
 String.__name__ = true;
 Array.__name__ = true;
+end
+_hx_funcToField = function(f)
+  if type(f) == 'function' then 
+    return function(self,...) 
+      return f(...) 
+    end
+  else 
+    return f
+  end
 end
 _hx_print = print or (function() end)
 _hx_table = {}
