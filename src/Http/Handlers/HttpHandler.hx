@@ -10,15 +10,9 @@ class HttpHandler implements IHandler {
     /**
         Constructor
     **/
-    public function new () {        
-    }
-
-    /**
-        Set callback on client request
-    **/
-    public function OnRequest (call : HttpContext -> Void) : Void {
+    public function new (call : HttpContext -> Void) {
         _onRequest = call;
-    }
+    }    
 
     /**
         Can handler process that request

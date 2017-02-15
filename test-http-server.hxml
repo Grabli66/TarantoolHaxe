@@ -3,6 +3,7 @@
 -cp src/Tarantool/Socket
 -cp src/Http
 -cp src/Http/Handlers
+-cp src/Chocolate
 -D lua_jit
 -dce full
 -main TestHttpServer

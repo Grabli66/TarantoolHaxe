@@ -10,24 +10,17 @@ class HttpServer {
     /**
         Request handlers
     **/
-    private var _handlers : Array<IHandler>;
-
-    /**
-        Add default handlers like http, static files
-    **/
-    private function AddDefaultHandlers () : Void {
-        AddHandler (new HttpHandler ());
-    }
+    private var _handlers : Array<IHandler>;    
 
     /**
         Process client requests
     **/
     private function ProcessClient (peer : Peer, channel : IRWChannel) {        
-        try {
-            var response = new HttpResponse (channel);
-            while (true) {
+        try {            
+            while (true) {                
                 var request = new HttpRequest (channel);
-                var context = new HttpContext (request, response);
+                var response = new HttpResponse (channel);
+                var context = new HttpContext (request, response);                
 
                 for (h in _handlers) {
                     if (h.CanProcess (request)) h.Process (context);
@@ -44,8 +37,7 @@ class HttpServer {
     **/
     public function new () {
         _socket = new TcpSocket ();
-        _handlers = new Array<IHandler> ();
-        AddDefaultHandlers ();
+        _handlers = new Array<IHandler> ();        
     }
 
     /**
@@ -63,13 +55,5 @@ class HttpServer {
         _socket.Bind (host, port, function (p : Peer, c : IRWChannel) {
             ProcessClient (p , c);
         });
-    }
-
-    /**
-        Set callback on client request
-    **/
-    public function OnRequest (call : HttpContext -> Void) : Void {        
-        var h : HttpHandler = cast (_handlers[0], HttpHandler);
-        h.OnRequest (call);
     }
 }

@@ -16,6 +16,11 @@ class HttpResponse implements IWriteChannel {
     private var _channel : IRWChannel;
 
     /**
+        Response headers
+    **/
+    public var Headers (default, null) : Map<String, String>;
+
+    /**
         Constructor
     **/
     public function new (channel : IRWChannel) {

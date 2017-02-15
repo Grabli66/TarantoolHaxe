@@ -39,8 +39,7 @@ class HttpRequest {
         if (parts.length != 3) throw "Bad request";
         Method = HttpMethod.createByName (parts[0].toLowerCase ());
         Resource = parts[1];
-        trace (Method);
-        trace (Resource);
+        trace ('$Method $Resource');        
 
         Headers = new Map<String, String> ();
 

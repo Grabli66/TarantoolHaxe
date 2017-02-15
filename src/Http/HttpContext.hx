@@ -1,6 +1,7 @@
 /**
     Context for request and response
 **/
+@:final
 class HttpContext {
     /**
         Request
