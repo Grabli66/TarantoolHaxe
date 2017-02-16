@@ -23,5 +23,16 @@
  *  Request from client
  */
 class Request {
-    
+    /**
+     *  Request headers
+     */
+    public var Headers (default, null) : Map <String, String>;
+
+    /**
+     *  Constructor. Converts http request to app request
+     *  @param request - Http request from http server
+     */
+    public function new (request : HttpRequest) {
+        Headers = request.Headers;
+    }
 }

@@ -4,8 +4,12 @@ class TestHttpServer {
             return "GOOD";
         });
 
+        App.Get ("/home", function (req : Request) {
+            return "home";
+        });
+
         App.Listen ({
-            port : 3301
+            port : 8081
         });
     }
 }

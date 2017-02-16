@@ -41,16 +41,31 @@ class App {
         _httpServer = new HttpServer ();
         _routes = new Map<String, Route> ();
     }
+    
+    /**
+     *  Write response to client
+     *  @param c - Http context for write
+     *  @param response - response from server
+     */
+    private static function WriteResponse (c : HttpContext, response : Response) {
+        c.Response.WriteString (response.ToString ());
+    }
 
     /**
      *  Process http request
      */
     private static function OnHttpRequest (c : HttpContext) : Void {
-        for (kv in _routes) {
-            if (kv.IsMatch (c.Request.Resource)) {
-                var resp = kv.Process ();
-                break;
+        try {
+            for (kv in _routes) {
+                if (kv.IsMatch (c.Request.Resource)) {
+                    var req = new Request (c.Request);
+                    var resp = kv.Process (req);
+                    WriteResponse (c, resp);
+                    break;
+                }
             }
+        } catch (e : Dynamic) {
+            trace (e);
         }
     }
 
@@ -60,7 +75,7 @@ class App {
      *  @param call - callback to handle request
      */
     public static function Get (pattern : String, call : RequestCall) : Void {
-        _routes[pattern] = new Route (pattern);
+        _routes[pattern] = new Route (pattern, call);
     }
 
     /**
@@ -69,7 +84,7 @@ class App {
      *  @param call - callback to handle request
      */
     public static function Post (pattern : String, call : RequestCall) : Void {
-        _routes[pattern] = new Route (pattern);
+        _routes[pattern] = new Route (pattern, call);
     }
 
     /**

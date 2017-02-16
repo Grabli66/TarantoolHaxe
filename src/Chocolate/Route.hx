@@ -28,13 +28,17 @@ class Route {
      */
     private var _pattern : String;
 
+    /**
+     *  Callback for process request
+     */
     private var _call : RequestCall;
 
     /**
      *  Constructor
      *  @param pattern - pattern for request. Example: /mypage/:id
      */
-    public function new (pattern : String) {
+    public function new (pattern : String, call : RequestCall) {
+        _call = call;
     }
 
     /**
@@ -47,9 +51,11 @@ class Route {
     }
 
     /**
-     *  Process request
+     *  Process client request
+     *  @param request - request converted from http request
+     *  @return Response
      */
-    public function Process () : Response {
-        return _call (null);
+    public function Process (request : Request) : Response {
+        return _call (request);
     }
 }

@@ -29,4 +29,12 @@ class JsonResponse {
      */
     public function new (s : Any) {        
     }
+
+    /**
+     *  Serialize json
+     *  @return String
+     */
+    public function ToString () : String {
+        return "";
+    }
 }

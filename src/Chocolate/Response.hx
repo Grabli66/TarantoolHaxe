@@ -22,24 +22,24 @@
 /**
  *  Response on client request
  */
-abstract Response (Any) {
+abstract Response (AppResponse) {
     /**
      *  Converts string to Response
      *  @param s - any string
      *  @return Response
      */
     @:from public static inline function FromString (s : String) : Response {
-        return new Response (s);
+        return new Response (AppResponse.string (s));
     }
 
     @:from public static inline function FromJson (s : JsonResponse) : Response {
-        return new Response (s);
+        return new Response (AppResponse.json (s));
     }
 
     /**
      *  Constructor
      */
-    public function new (d : Any) {
+    public function new (d : AppResponse) {
         this = d;
     }
 
@@ -47,6 +47,26 @@ abstract Response (Any) {
      *  Translate response to string
      */
     public function ToString () : String {
-        return "";
+        switch (this) {
+            case string (s): return s;
+            case json (s): return s.ToString ();
+        }
+
+        throw "Unknow response type";
     }
+}
+
+/**
+ *  Response types
+ */
+enum AppResponse {
+    /**
+     *  Response as string
+     */
+    string (s : String);
+
+    /**
+     *  Response as json
+     */
+    json (s : JsonResponse);
 }
