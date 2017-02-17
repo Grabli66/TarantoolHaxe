@@ -1,0 +1,11 @@
+-cp test
+-cp src/Tarantool
+-cp src/Tarantool/Socket
+-cp src/Http
+-cp src/Http/Handlers
+-cp src/Chocolate
+-cp src/Zephyr
+-D lua_jit
+-dce full
+-main TestZephyr
+-lua out/test-zephyr.lua
