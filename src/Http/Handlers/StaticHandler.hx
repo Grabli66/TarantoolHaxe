@@ -19,21 +19,30 @@
  * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+using StringTools;
+
 /**
- *  Process http request
+ *  Process static content
  */
-class HttpHandler implements IHandler {
+class StaticHandler implements IHandler {
     /**
-     *  On request callback
+     *  Paths to process
      */
-    private var _onRequest : HttpContext -> Void;
+    public var Paths : Map<String, String>;
 
     /**
      *  Constructor
-     *  @param call - callback on request
      */
-    public function new (call : HttpContext -> Void) {
-        _onRequest = call;
+    public function new () {
+        Paths = new Map<String, String> ();
+    }
+    
+    /**
+     *  Add path that can be processed
+     *  @param path - relative path from working dir
+     */
+    public function AddPath (path : String) {
+        Paths.set (path, path);
     }
 
     /**
@@ -41,11 +50,17 @@ class HttpHandler implements IHandler {
      *  @param context - Http context
      */
     public function Process (context : HttpContext) : Bool {
-        return false;
-        
-        if (_onRequest != null) {
-            _onRequest (context);
-            context.Response.Close ();
-        }                
+        var path : String = context.Request.Resource.path;
+        var parts = path.split ("/");
+        var file = parts.pop ();
+        var newPath = parts.join ("/");
+
+        trace (newPath);
+        if (Paths.exists (newPath)) {
+            var fl = '${newPath}/${file}';
+            trace (fl);
+        }
+
+        return true;
     }
 }

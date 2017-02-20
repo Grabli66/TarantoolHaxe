@@ -27,7 +27,7 @@ class App {
     /**
      *  Http server
      */
-    private static var _httpServer : HttpServer;
+    private static var _httpServer : HttpServer;    
 
     /**
      *  Routes 
@@ -93,7 +93,10 @@ class App {
      */
     public static function Listen (options : AppOptions) {
         var httpHandler = new HttpHandler (OnHttpRequest);
+        var staticHandler = new StaticHandler ();
+        staticHandler.AddPath ("css");
         _httpServer.AddHandler (httpHandler);
+        _httpServer.AddHandler (staticHandler);
         _httpServer.Bind ("*", options.port);
     }
 }

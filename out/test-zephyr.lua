@@ -63,6 +63,7 @@ local IRWChannel = _hx_e()
 local TcpSocket = _hx_e()
 local Array = _hx_e()
 local App = _hx_e()
+local EReg = _hx_e()
 local HtmlBuilder = _hx_e()
 local HttpContext = _hx_e()
 local IHandler = _hx_e()
@@ -79,10 +80,12 @@ local _Response = {}
 _Response.Response_Impl_ = _hx_e()
 local AppResponse = _hx_e()
 local Route = _hx_e()
+local StaticHandler = _hx_e()
 local String = _hx_e()
 local Std = _hx_e()
 local StringBuf = _hx_e()
 local StringTools = _hx_e()
+local Sys = _hx_e()
 local _Tag = {}
 _Tag.Tag_Impl_ = _hx_e()
 local TagInternal = _hx_e()
@@ -90,8 +93,15 @@ local TestZephyr = _hx_e()
 local TextTag = _hx_e()
 local Type = _hx_e()
 local haxe = {}
+haxe.StackItem = _hx_e()
 haxe.IMap = _hx_e()
+haxe._EntryPoint = {}
+haxe._EntryPoint.Lock = _hx_e()
+haxe._EntryPoint.Mutex = _hx_e()
+haxe.EntryPoint = _hx_e()
 haxe.Log = _hx_e()
+haxe.MainEvent = _hx_e()
+haxe.MainLoop = _hx_e()
 haxe.ds = {}
 haxe.ds.StringMap = _hx_e()
 haxe.io = {}
@@ -103,6 +113,15 @@ local lua = {}
 lua.Boot = _hx_e()
 lua.UserData = _hx_e()
 lua.Thread = _hx_e()
+local tink = {}
+tink._Url = {}
+tink._Url.Url_Impl_ = _hx_e()
+tink.core = {}
+tink.core.TypedError = _hx_e()
+tink.core.Outcome = _hx_e()
+tink.url = {}
+tink.url._Path = {}
+tink.url._Path.Path_Impl_ = _hx_e()
 
 local _hx_bind, _hx_bit, _hx_staticToInstance, _hx_funcToField, _hx_maxn, _hx_print, _hx_apply_self, _hx_box_mr, _hx_bit_clamp, _hx_table, _hx_bit_raw
 
@@ -130,8 +149,8 @@ HttpServer.prototype = _hx_a(
           while (_g < _g1.length) do 
             local h = _g1[_g];
             _g = _g + 1;
-            if (h:CanProcess(request)) then 
-              h:Process(context);
+            if (h:Process(context)) then 
+              break;
             end;
             end;
           end;
@@ -139,7 +158,7 @@ HttpServer.prototype = _hx_a(
      if not _hx_status then 
       local _hx_1 = _hx_result
       local e = _hx_1
-      haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="HttpServer.hx",lineNumber=30,className="HttpServer",methodName="ProcessClient"}));
+      haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="HttpServer.hx",lineNumber=32,className="HttpServer",methodName="ProcessClient"}));
       channel:Close();
      elseif _hx_result ~= _hx_expected_result then return _hx_result end;
   end,
@@ -279,6 +298,33 @@ Array.prototype = _hx_a(
     _G.rawset(self,"length",self.length + 1);
     do return _G.rawget(self,"length") end
   end,
+  'shift', function(self) 
+    if (self.length == 0) then 
+      do return nil end;
+    end;
+    local ret = self[0];
+    local _g1 = 0;
+    local _g = self.length;
+    while (_g1 < _g) do 
+      _g1 = _g1 + 1;
+      local i = _g1 - 1;
+      self[i] = self[i + 1];
+      end;
+    local tmp = self;
+    tmp.length = tmp.length - 1;
+    do return ret end
+  end,
+  'unshift', function(self,x) 
+    local len = self.length;
+    local _g1 = 0;
+    local _g = len;
+    while (_g1 < _g) do 
+      _g1 = _g1 + 1;
+      local i = _g1 - 1;
+      self[len - i] = self[(len - i) - 1];
+      end;
+    self[0] = x;
+  end,
   'iterator', function(self) 
     local _gthis = self;
     local cur_length = 0;
@@ -304,7 +350,7 @@ App.OnHttpRequest = function(c)
       local kv = App._routes:iterator();
       while (kv:hasNext()) do 
         local kv1 = kv:next();
-        if (kv1:IsMatch(c.Request.Resource)) then 
+        if (kv1:IsMatch(tink._Url.Url_Impl_.toString(c.Request.Resource))) then 
           local req = Request.new(c.Request);
           local resp = kv1:Process(req);
           App.WriteResponse(c,resp);
@@ -327,9 +373,77 @@ App.Get = function(pattern,call)
 end
 App.Listen = function(options) 
   local httpHandler = HttpHandler.new(App.OnHttpRequest);
+  local staticHandler = StaticHandler.new();
   App._httpServer:AddHandler(httpHandler);
+  App._httpServer:AddHandler(staticHandler);
   App._httpServer:Bind("*",options.port);
 end
+lua.lib = {}
+lua.lib.lrexlib = {}
+lua.lib.lrexlib.Rex = _G.require("rex_pcre")
+
+EReg.new = function(r,opt) 
+  local self = _hx_new(EReg.prototype)
+  EReg.super(self,r,opt)
+  return self
+end
+EReg.super = function(self,r,opt) 
+  local ropt = 0;
+  local _g1 = 0;
+  local _g = opt.length;
+  while (_g1 < _g) do 
+    _g1 = _g1 + 1;
+    local i = _g1 - 1;
+    local _g2 = opt:charAt(i);
+    local _g21 = _g2;
+    if (_g21) == "g" then 
+      self.global = true;
+    elseif (_g21) == "i" then 
+      ropt = _hx_bit.bor(ropt,EReg.FLAGS.CASELESS);
+    elseif (_g21) == "m" then 
+      ropt = _hx_bit.bor(ropt,EReg.FLAGS.MULTILINE);
+    elseif (_g21) == "s" then 
+      ropt = _hx_bit.bor(ropt,EReg.FLAGS.DOTALL);
+    elseif (_g21) == "u" then 
+      ropt = _hx_bit.bor(ropt,EReg.FLAGS.UTF8);else end;
+    end;
+  if (self.global == nil) then 
+    self.global = false;
+  end;
+  self.r = lua.lib.lrexlib.Rex.new(r,ropt);
+end
+EReg.__name__ = true
+EReg.prototype = _hx_a(
+  'match', function(self,s) 
+    if (s == nil) then 
+      do return false end;
+    end;
+    self.m = _hx_table.pack(self.r:exec(s));
+    self.s = s;
+    do return self.m[1] ~= nil end
+  end,
+  'matched', function(self,n) 
+    if ((self.m[1] == nil) or (n < 0)) then 
+      _G.error("EReg::matched",0);
+    else
+      if (n == 0) then 
+        local k = _G.string.sub(self.s,self.m[1],self.m[2]);
+        do return k end;
+      else
+        if (lua.Boot.__instanceof(self.m[3],_G.table)) then 
+          local mn = 2 * (n - 1);
+          if (lua.Boot.__instanceof(self.m[3][mn + 1],Bool)) then 
+            do return nil end;
+          end;
+          do return _G.string.sub(self.s,self.m[3][mn + 1],self.m[3][mn + 2]) end;
+        else
+          _G.error("EReg:matched",0);
+        end;
+      end;
+    end;
+  end
+  ,'__class__',  EReg
+)
 
 HtmlBuilder.new = {}
 HtmlBuilder.__name__ = true
@@ -383,14 +497,8 @@ end
 HttpHandler.__name__ = true
 HttpHandler.__interfaces__ = {IHandler}
 HttpHandler.prototype = _hx_a(
-  'CanProcess', function(self,request) 
-    do return true end
-  end,
   'Process', function(self,context) 
-    if (self._onRequest ~= nil) then 
-      self:_onRequest(context);
-      context.Response:Close();
-    end;
+    do return false end
   end
   ,'__class__',  HttpHandler
 )
@@ -432,8 +540,8 @@ HttpRequest.prototype = _hx_a(
       _G.error("Bad request",0);
     end;
     self.Method = Type.createEnum(HttpMethod,parts[0]:toLowerCase(),nil);
-    self.Resource = parts[1];
-    haxe.Log.trace("" .. Std.string(self.Method) .. " " .. self.Resource,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="HttpRequest.hx",lineNumber=42,className="HttpRequest",methodName="ReadHeaders"}));
+    self.Resource = tink._Url.Url_Impl_.parse(parts[1]);
+    haxe.Log.trace("" .. Std.string(self.Method) .. " " .. tink._Url.Url_Impl_.toString(self.Resource),_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="HttpRequest.hx",lineNumber=64,className="HttpRequest",methodName="ReadHeaders"}));
     self.Headers = haxe.ds.StringMap.new();
     line = StringTools.trim(channel:ReadUntil("\n"));
     while (line.length > 0) do 
@@ -634,6 +742,28 @@ Route.prototype = _hx_a(
   ,'__class__',  Route
 )
 
+StaticHandler.new = function() 
+  local self = _hx_new(StaticHandler.prototype)
+  StaticHandler.super(self)
+  return self
+end
+StaticHandler.super = function(self) 
+  self.Paths = Array.new();
+end
+StaticHandler.__name__ = true
+StaticHandler.__interfaces__ = {IHandler}
+StaticHandler.prototype = _hx_a(
+  'Process', function(self,context) 
+    local path = context.Request.Resource.path;
+    local parts = path:split("/");
+    local file = parts:pop();
+    local newPath = parts:join("/");
+    haxe.Log.trace(newPath,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true,customParams=true},fileName="StaticHandler.hx",lineNumber=49,className="StaticHandler",methodName="Process",customParams=_hx_tab_array({[0]=file }, 1)}));
+    do return true end
+  end
+  ,'__class__',  StaticHandler
+)
+
 String.new = {}
 String.__name__ = true
 String.__index = function(s,k) 
@@ -701,6 +831,9 @@ String.prototype = _hx_a(
   'toString', function(self) 
     do return self end
   end,
+  'charAt', function(self,index) 
+    do return _G.string.sub(self,index + 1,index + 1) end
+  end,
   'charCodeAt', function(self,index) 
     do return _G.string.byte(self,index + 1) end
   end,
@@ -762,6 +895,22 @@ StringBuf.prototype = _hx_a(
 
 StringTools.new = {}
 StringTools.__name__ = true
+StringTools.startsWith = function(s,start) 
+  if (s.length >= start.length) then 
+    do return s:substr(0,start.length) == start end;
+  else
+    do return false end;
+  end;
+end
+StringTools.endsWith = function(s,_end) 
+  local elen = _end.length;
+  local slen = s.length;
+  if (slen >= elen) then 
+    do return s:substr(slen - elen,elen) == _end end;
+  else
+    do return false end;
+  end;
+end
 StringTools.isSpace = function(s,pos) 
   if (((s.length == 0) or (pos < 0)) or (pos >= s.length)) then 
     do return false end;
@@ -799,6 +948,15 @@ StringTools.rtrim = function(s)
 end
 StringTools.trim = function(s) 
   do return StringTools.ltrim(StringTools.rtrim(s)) end;
+end
+StringTools.replace = function(s,sub,by) 
+  do return s:split(sub):join(by) end;
+end
+
+Sys.new = {}
+Sys.__name__ = true
+Sys.time = function() 
+  do return lua.lib.luasocket.Socket.gettime() end;
 end
 
 _Tag.Tag_Impl_.new = {}
@@ -976,9 +1134,72 @@ Type.createEnum = function(e,constr,params)
   end;
   do return f end;
 end
+_hxClasses["haxe.StackItem"] = { __ename__ = true, __constructs__ = _hx_tab_array({[0]="CFunction","Module","FilePos","Method","LocalFunction"},5)}
+haxe.StackItem = _hxClasses["haxe.StackItem"];
+haxe.StackItem.CFunction = _hx_tab_array({[0]="CFunction",0,__enum__ = haxe.StackItem},2)
+
+haxe.StackItem.Module = function(m) local _x = _hx_tab_array({[0]="Module",1,m,__enum__=haxe.StackItem}, 3); return _x; end 
+haxe.StackItem.FilePos = function(s,file,line) local _x = _hx_tab_array({[0]="FilePos",2,s,file,line,__enum__=haxe.StackItem}, 5); return _x; end 
+haxe.StackItem.Method = function(classname,method) local _x = _hx_tab_array({[0]="Method",3,classname,method,__enum__=haxe.StackItem}, 4); return _x; end 
+haxe.StackItem.LocalFunction = function(v) local _x = _hx_tab_array({[0]="LocalFunction",4,v,__enum__=haxe.StackItem}, 3); return _x; end 
 
 haxe.IMap.new = {}
 haxe.IMap.__name__ = true
+
+haxe._EntryPoint.Lock.new = function() 
+  local self = _hx_new(haxe._EntryPoint.Lock.prototype)
+  haxe._EntryPoint.Lock.super(self)
+  return self
+end
+haxe._EntryPoint.Lock.super = function(self) 
+end
+haxe._EntryPoint.Lock.__name__ = true
+haxe._EntryPoint.Lock.prototype = _hx_a(
+  
+  '__class__',  haxe._EntryPoint.Lock
+)
+
+haxe._EntryPoint.Mutex.new = function() 
+  local self = _hx_new(haxe._EntryPoint.Mutex.prototype)
+  haxe._EntryPoint.Mutex.super(self)
+  return self
+end
+haxe._EntryPoint.Mutex.super = function(self) 
+end
+haxe._EntryPoint.Mutex.__name__ = true
+haxe._EntryPoint.Mutex.prototype = _hx_a(
+  
+  '__class__',  haxe._EntryPoint.Mutex
+)
+
+haxe.EntryPoint.new = {}
+haxe.EntryPoint.__name__ = true
+haxe.EntryPoint.processEvents = function() 
+  while (true) do 
+    local _this = haxe.EntryPoint.mutex;
+    local f = haxe.EntryPoint.pending:shift();
+    local _this1 = haxe.EntryPoint.mutex;
+    if (f == nil) then 
+      break;
+    end;
+    f();
+    end;
+  if ((haxe.MainLoop.pending == nil) and (haxe.EntryPoint.threadCount == 0)) then 
+    do return -1 end;
+  end;
+  do return haxe.MainLoop.tick() end;
+end
+haxe.EntryPoint.run = function() 
+  while (true) do 
+    local nextTick = haxe.EntryPoint.processEvents();
+    if (nextTick < 0) then 
+      break;
+    end;
+    if (nextTick > 0) then 
+      local _this = haxe.EntryPoint.sleepLock;
+    end;
+    end;
+end
 
 haxe.Log.new = {}
 haxe.Log.__name__ = true
@@ -996,6 +1217,107 @@ haxe.Log.trace = function(v,infos)
     str = "null";
   end;
   _hx_print(str);
+end
+
+haxe.MainEvent.new = {}
+haxe.MainEvent.__name__ = true
+haxe.MainEvent.prototype = _hx_a(
+  
+  '__class__',  haxe.MainEvent
+)
+
+haxe.MainLoop.new = {}
+haxe.MainLoop.__name__ = true
+haxe.MainLoop.sortEvents = function() 
+  local list = haxe.MainLoop.pending;
+  if (list == nil) then 
+    do return end;
+  end;
+  local insize = 1;
+  local nmerges;
+  local psize = 0;
+  local qsize = 0;
+  local p;
+  local q;
+  local e;
+  local tail;
+  while (true) do 
+    p = list;
+    list = nil;
+    tail = nil;
+    nmerges = 0;
+    while (p ~= nil) do 
+      nmerges = nmerges + 1;
+      q = p;
+      psize = 0;
+      local _g1 = 0;
+      local _g = insize;
+      while (_g1 < _g) do 
+        _g1 = _g1 + 1;
+        local i = _g1 - 1;
+        psize = psize + 1;
+        q = q.next;
+        if (q == nil) then 
+          break;
+        end;
+        end;
+      qsize = insize;
+      while ((psize > 0) or ((qsize > 0) and (q ~= nil))) do 
+        if (psize == 0) then 
+          e = q;
+          q = q.next;
+          qsize = qsize - 1;
+        else
+          if (((qsize == 0) or (q == nil)) or ((p.priority > q.priority) or ((p.priority == q.priority) and (p.nextRun <= q.nextRun)))) then 
+            e = p;
+            p = p.next;
+            psize = psize - 1;
+          else
+            e = q;
+            q = q.next;
+            qsize = qsize - 1;
+          end;
+        end;
+        if (tail ~= nil) then 
+          tail.next = e;
+        else
+          list = e;
+        end;
+        e.prev = tail;
+        tail = e;
+        end;
+      p = q;
+      end;
+    tail.next = nil;
+    if (nmerges <= 1) then 
+      break;
+    end;
+    insize = insize * 2;
+    end;
+  list.prev = nil;
+  haxe.MainLoop.pending = list;
+end
+haxe.MainLoop.tick = function() 
+  haxe.MainLoop.sortEvents();
+  local e = haxe.MainLoop.pending;
+  local now = Sys.time();
+  local wait = 1e9;
+  while (e ~= nil) do 
+    local next = e.next;
+    local wt = e.nextRun - now;
+    if ((e.nextRun < 0) or (wt <= 0)) then 
+      wait = 0;
+      if (e.f ~= nil) then 
+        e:f();
+      end;
+    else
+      if (wait > wt) then 
+        wait = wt;
+      end;
+    end;
+    e = next;
+    end;
+  do return wait end;
 end
 
 haxe.ds.StringMap.new = function() 
@@ -1376,6 +1698,217 @@ lua.UserData.__name__ = true
 
 lua.Thread.new = {}
 lua.Thread.__name__ = true
+lua.lib.luasocket = {}
+lua.lib.luasocket.Socket = _G.require("socket")
+
+tink._Url.Url_Impl_.new = {}
+tink._Url.Url_Impl_.__name__ = true
+tink._Url.Url_Impl_.toString = function(this1) 
+  local _g = this1.scheme;
+  if (_g == nil) then 
+    do return this1.payload end;
+  else
+    do return "" .. this1.scheme .. ":" .. this1.payload end;
+  end;
+end
+tink._Url.Url_Impl_.parse = function(s) 
+  if (s == nil) then 
+    do return tink._Url.Url_Impl_.parse("") end;
+  end;
+  s = StringTools.trim(s);
+  if (StringTools.startsWith(s,"data:")) then 
+    local this1 = _hx_o({__fields__={scheme=true,payload=true},scheme="data",payload=s:substr(5)});
+    do return this1 end;
+  end;
+  local FORMAT = EReg.new("^(([a-zA-Z][a-zA-Z0-9\\-]*):)?((//(([^@/]+)@)?([^/?#]*))?([^?#]*)(\\?([^#]*))?(#(.*))?)$","");
+  local HOST = EReg.new("^(\\[(.*)\\]|([^:]*))(:(\\d*))?$","");
+  FORMAT:match(s);
+  local hosts;
+  local _g = FORMAT:matched(7);
+  if (_g == nil) then 
+    hosts = _hx_tab_array({ }, 0);
+  else
+    local v = _g;
+    local _g1 = _hx_tab_array({ }, 0);
+    local _g11 = 0;
+    local _g2 = v:split(",");
+    while (_g11 < _g2.length) do 
+      local host = _g2[_g11];
+      _g11 = _g11 + 1;
+      HOST:match(host);
+      local host1;
+      local _g3 = HOST:matched(2);
+      local _g4 = HOST:matched(3);
+      if (_g3 == nil) then 
+        local ipv4 = _g4;
+        host1 = ipv4;
+      else
+        if (_g4 == nil) then 
+          local ipv6 = _g3;
+          host1 = "[" .. ipv6 .. "]";
+        else
+          _G.error("assert",0);
+        end;
+      end;
+      local port;
+      local _g5 = HOST:matched(5);
+      if (_g5 == nil) then 
+        port = nil;
+      else
+        local v1 = _g5;
+        local _g51 = Std.parseInt(v1);
+        if (_g51 == nil) then 
+          _G.error("Invalid port",0);
+        else
+          local p = _g51;
+          port = p;
+        end;
+      end;
+      local this2;
+      if (port == nil) then 
+        this2 = host1;
+      else
+        if ((port > 65535) or (port <= 0)) then 
+          _G.error("Invalid port",0);
+        else
+          this2 = "" .. host1 .. ":" .. port;
+        end;
+      end;
+      _g1:push(this2);
+      end;
+    hosts = _g1;
+  end;
+  local path = FORMAT:matched(8);
+  if ((hosts.length > 0) and (path:charAt(0) ~= "/")) then 
+    path = "/" .. path;
+  end;
+  local this3 = _hx_o({__fields__={scheme=true,payload=true,host=true,hosts=true,auth=true,path=true,query=true,hash=true},scheme=FORMAT:matched(2),payload=FORMAT:matched(3),host=hosts[0],hosts=hosts,auth=FORMAT:matched(6),path=tink.url._Path.Path_Impl_.ofString(path),query=FORMAT:matched(10),hash=FORMAT:matched(12)});
+  do return this3 end;
+end
+
+tink.core.TypedError.new = function(code,message,pos) 
+  local self = _hx_new(tink.core.TypedError.prototype)
+  tink.core.TypedError.super(self,code,message,pos)
+  return self
+end
+tink.core.TypedError.super = function(self,code,message,pos) 
+  if (code == nil) then 
+    code = 500;
+  end;
+  self.code = code;
+  self.message = message;
+  self.pos = pos;
+  self.exceptionStack = _hx_tab_array({ }, 0);
+  self.callStack = _hx_tab_array({ }, 0);
+end
+tink.core.TypedError.__name__ = true
+tink.core.TypedError.withData = function(code,message,data,pos) 
+  do return tink.core.TypedError.typed(code,message,data,pos) end;
+end
+tink.core.TypedError.typed = function(code,message,data,pos) 
+  local ret = tink.core.TypedError.new(code,message,pos);
+  ret.data = data;
+  do return ret end;
+end
+tink.core.TypedError.catchExceptions = function(f,report,pos) 
+  local _hx_expected_result = {}
+  local _hx_status, _hx_result = pcall(function() 
+  
+      do return tink.core.Outcome.Success(f()) end;
+     return _hx_expected_result end)
+   if not _hx_status then 
+    local _hx_1 = _hx_result
+    if( lua.Boot.__instanceof(_hx_1,tink.core.TypedError) ) then 
+      local e = _hx_1
+      do return tink.core.Outcome.Failure(e) end;
+    else
+    local e1 = _hx_1
+    do return tink.core.Outcome.Failure((function() 
+      local _hx_2
+      if (report == nil) then 
+      _hx_2 = tink.core.TypedError.withData(nil,"Unexpected Error",e1,pos); else 
+      _hx_2 = report(e1); end
+      return _hx_2
+    end )()) end;
+     end 
+   elseif _hx_result ~= _hx_expected_result then return _hx_result end;
+end
+tink.core.TypedError.reporter = function(code,message,pos) 
+  do return function(e) 
+    do return tink.core.TypedError.withData(code,message,e,pos) end;
+  end end;
+end
+tink.core.TypedError.rethrow = function(any) 
+  _G.error(any,0);
+end
+tink.core.TypedError.prototype = _hx_a(
+  'printPos', function(self) 
+    do return self.pos.className .. "." .. self.pos.methodName .. ":" .. self.pos.lineNumber end
+  end,
+  'toString', function(self) 
+    local ret = "Error#" .. self.code .. ": " .. self.message;
+    if (self.pos ~= nil) then 
+      ret = ret .. (" @ " .. self:printPos());
+    end;
+    do return ret end
+  end,
+  'throwSelf', function(self) 
+    _G.error(self,0);
+  end
+  ,'__class__',  tink.core.TypedError
+)
+_hxClasses["tink.core.Outcome"] = { __ename__ = true, __constructs__ = _hx_tab_array({[0]="Success","Failure"},2)}
+tink.core.Outcome = _hxClasses["tink.core.Outcome"];
+tink.core.Outcome.Success = function(data) local _x = _hx_tab_array({[0]="Success",0,data,__enum__=tink.core.Outcome}, 3); return _x; end 
+tink.core.Outcome.Failure = function(failure) local _x = _hx_tab_array({[0]="Failure",1,failure,__enum__=tink.core.Outcome}, 3); return _x; end 
+
+tink.url._Path.Path_Impl_.new = {}
+tink.url._Path.Path_Impl_.__name__ = true
+tink.url._Path.Path_Impl_.ofString = function(s) 
+  local this1 = tink.url._Path.Path_Impl_.normalize(s);
+  do return this1 end;
+end
+tink.url._Path.Path_Impl_.normalize = function(s) 
+  s = StringTools.trim(StringTools.replace(s,"\\","/"));
+  if (s == ".") then 
+    do return "./" end;
+  end;
+  local isDir = (StringTools.endsWith(s,"/..") or StringTools.endsWith(s,"/")) or StringTools.endsWith(s,"/.");
+  local parts = _hx_tab_array({ }, 0);
+  local isAbsolute = StringTools.startsWith(s,"/");
+  local up = 0;
+  local _g = 0;
+  local _g1 = s:split("/");
+  while (_g < _g1.length) do 
+    local part = _g1[_g];
+    _g = _g + 1;
+    local _g2 = StringTools.trim(part);
+    local _g21 = _g2;
+    if (_g21) == "" then 
+    elseif (_g21) == "." then 
+    elseif (_g21) == ".." then 
+      if (parts:pop() == nil) then 
+        up = up + 1;
+      end;else
+    local v = _g2;
+    parts:push(v); end;
+    end;
+  if (isAbsolute) then 
+    parts:unshift("");
+  else
+    local _g11 = 0;
+    local _g3 = up;
+    while (_g11 < _g3) do 
+      _g11 = _g11 + 1;
+      local i = _g11 - 1;
+      parts:unshift("..");
+      end;
+  end;
+  if (isDir) then 
+    parts:push("");
+  end;
+  do return parts:join("/") end;
+end
 _hx_bit_clamp = function(v) 
   if v <= 2147483647 and v >= -2147483648 then
     if v > 0 then return _G.math.floor(v)
@@ -1402,16 +1935,27 @@ _hx_string_mt.__add = function(a,b) return Std.string(a)..Std.string(b) end;
 _hx_string_mt.__concat = _hx_string_mt.__add
 _hx_array_mt.__index = Array.prototype
 
+EReg.FLAGS = lua.lib.lrexlib.Rex.flags()
+haxe.EntryPoint.sleepLock = haxe._EntryPoint.Lock.new()
+haxe.EntryPoint.mutex = haxe._EntryPoint.Mutex.new()
+haxe.EntryPoint.pending = Array.new()
+haxe.EntryPoint.threadCount = 0
 lua.Boot.hiddenFields = {__id__=true, hx__closures=true, super=true, prototype=true, __fields__=true, __ifields__=true, __class__=true, __properties__=true}
 do
 
 App._httpServer = HttpServer.new();
 App._routes = haxe.ds.StringMap.new();
+if (lua.lib.lrexlib.Rex == nil) then 
+  _G.error("Rex is missing.  Please install lrexlib-pcre.",0);
+end;
 String.prototype.__class__ = String;
 String.__name__ = true;
 Array.__name__ = true;
 App._httpServer = HttpServer.new();
 App._routes = haxe.ds.StringMap.new();
+if (lua.lib.lrexlib.Rex == nil) then 
+  _G.error("Rex is missing.  Please install lrexlib-pcre.",0);
+end;
 String.prototype.__class__ = String;
 String.__name__ = true;
 Array.__name__ = true;
@@ -1438,5 +1982,8 @@ _hx_table.maxn = _G.table.maxn or function(t)
   end
   return maxn
 end;
-TestZephyr.main()
+
+  TestZephyr.main();
+  haxe.EntryPoint.run();
+
 return _hx_exports

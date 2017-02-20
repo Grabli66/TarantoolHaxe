@@ -5,6 +5,7 @@
 -cp src/Http/Handlers
 -cp src/Chocolate
 -cp src/Zephyr
+-lib tink_url
 -D lua_jit
 -dce full
 -main TestZephyr
