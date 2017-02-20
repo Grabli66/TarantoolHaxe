@@ -14,8 +14,18 @@ class TestZephyr {
                 ]);
         });
 
+        App.OnError (HttpError.NotFound, function (req : Request) {
+            return "";
+        });
+
+        /*App.WebSocket.OnConnect ();
+        App.WebSocket.OnData ();
+        App.WebSocket.OnClose ();
+        App.WebSocket.OnError ();*/
+
         App.Listen ({
-            port : 8081
+            Port : 8081,
+            StaticDir : "./out/media"
         });
     }
 }

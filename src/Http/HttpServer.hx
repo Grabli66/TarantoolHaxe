@@ -24,9 +24,15 @@ class HttpServer {
                 var response = new HttpResponse (channel);
                 var context = new HttpContext (request, response);                
 
+                var found = false;
                 for (h in _handlers) {
-                    if (h.Process (context)) break;                    
+                    if (h.Process (context)) {
+                        found = true;
+                        break;
+                    }
                 }
+
+                if (!found) throw "Not found";
             }
         } catch (e : Dynamic) {
             trace (e);

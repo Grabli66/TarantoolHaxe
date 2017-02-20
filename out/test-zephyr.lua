@@ -64,8 +64,10 @@ local TcpSocket = _hx_e()
 local Array = _hx_e()
 local App = _hx_e()
 local EReg = _hx_e()
+local Fio = _hx_e()
 local HtmlBuilder = _hx_e()
 local HttpContext = _hx_e()
+local HttpError = _hx_e()
 local IHandler = _hx_e()
 local HttpHandler = _hx_e()
 local HttpMethod = _hx_e()
@@ -103,6 +105,9 @@ haxe.Log = _hx_e()
 haxe.MainEvent = _hx_e()
 haxe.MainLoop = _hx_e()
 haxe.ds = {}
+haxe.ds.BalancedTree = _hx_e()
+haxe.ds.TreeNode = _hx_e()
+haxe.ds.EnumValueMap = _hx_e()
 haxe.ds.StringMap = _hx_e()
 haxe.io = {}
 haxe.io.Bytes = _hx_e()
@@ -144,21 +149,26 @@ HttpServer.prototype = _hx_a(
           local request = HttpRequest.new(channel);
           local response = HttpResponse.new(channel);
           local context = HttpContext.new(request,response);
+          local found = false;
           local _g = 0;
           local _g1 = self._handlers;
           while (_g < _g1.length) do 
             local h = _g1[_g];
             _g = _g + 1;
             if (h:Process(context)) then 
+              found = true;
               break;
             end;
             end;
+          if (not found) then 
+            _G.error("Not found",0);
+          end;
           end;
        return _hx_expected_result end)
      if not _hx_status then 
       local _hx_1 = _hx_result
       local e = _hx_1
-      haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="HttpServer.hx",lineNumber=32,className="HttpServer",methodName="ProcessClient"}));
+      haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="HttpServer.hx",lineNumber=38,className="HttpServer",methodName="ProcessClient"}));
       channel:Close();
      elseif _hx_result ~= _hx_expected_result then return _hx_result end;
   end,
@@ -325,6 +335,19 @@ Array.prototype = _hx_a(
       end;
     self[0] = x;
   end,
+  'filter', function(self,f) 
+    local _g = _hx_tab_array({ }, 0);
+    local _g1 = 0;
+    local _g2 = self;
+    while (_g1 < _g2.length) do 
+      local i = _g2[_g1];
+      _g1 = _g1 + 1;
+      if (f(i)) then 
+        _g:push(i);
+      end;
+      end;
+    do return _g end
+  end,
   'iterator', function(self) 
     local _gthis = self;
     local cur_length = 0;
@@ -361,7 +384,7 @@ App.OnHttpRequest = function(c)
    if not _hx_status then 
     local _hx_1 = _hx_result
     local e = _hx_1
-    haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="App.hx",lineNumber=68,className="App",methodName="OnHttpRequest"}));
+    haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="App.hx",lineNumber=74,className="App",methodName="OnHttpRequest"}));
    elseif _hx_result ~= _hx_expected_result then return _hx_result end;
 end
 App.Get = function(pattern,call) 
@@ -371,12 +394,18 @@ App.Get = function(pattern,call)
   _this.v[pattern] = v;
   _this.k[pattern] = true;
 end
+App.OnError = function(err,call) 
+  App._errorHandlers:set(err,call);
+end
 App.Listen = function(options) 
   local httpHandler = HttpHandler.new(App.OnHttpRequest);
-  local staticHandler = StaticHandler.new();
+  if (options.StaticDir ~= nil) then 
+    local staticHandler = StaticHandler.new();
+    staticHandler:AddPath(options.StaticDir);
+    App._httpServer:AddHandler(staticHandler);
+  end;
   App._httpServer:AddHandler(httpHandler);
-  App._httpServer:AddHandler(staticHandler);
-  App._httpServer:Bind("*",options.port);
+  App._httpServer:Bind("*",options.Port);
 end
 lua.lib = {}
 lua.lib.lrexlib = {}
@@ -445,6 +474,21 @@ EReg.prototype = _hx_a(
   ,'__class__',  EReg
 )
 
+Fio.new = {}
+Fio.__name__ = true
+Fio.Exists = function(path) 
+  local d = Fio._module.stat(path);
+  do return d ~= nil end;
+end
+Fio.ReadAllBytes = function(path) 
+  local d = Fio._module.open(path);
+  local s = d:stat();
+  local size = s.size;
+  local data = d:read(size);
+  d:close();
+  do return haxe.io.Bytes.ofString(data) end;
+end
+
 HtmlBuilder.new = {}
 HtmlBuilder.__name__ = true
 HtmlBuilder.html = function(options,tags) 
@@ -478,6 +522,12 @@ HttpContext.prototype = _hx_a(
   
   '__class__',  HttpContext
 )
+_hxClasses["HttpError"] = { __ename__ = true, __constructs__ = _hx_tab_array({[0]="Internal","NotFound"},2)}
+HttpError = _hxClasses["HttpError"];
+HttpError.Internal = _hx_tab_array({[0]="Internal",0,__enum__ = HttpError},2)
+
+HttpError.NotFound = _hx_tab_array({[0]="NotFound",1,__enum__ = HttpError},2)
+
 
 IHandler.new = {}
 IHandler.__name__ = true
@@ -498,7 +548,11 @@ HttpHandler.__name__ = true
 HttpHandler.__interfaces__ = {IHandler}
 HttpHandler.prototype = _hx_a(
   'Process', function(self,context) 
-    do return false end
+    if (self._onRequest ~= nil) then 
+      self:_onRequest(context);
+      context.Response:Close();
+    end;
+    do return true end
   end
   ,'__class__',  HttpHandler
 )
@@ -688,6 +742,32 @@ Reflect.isFunction = function(f)
     do return false end;
   end;
 end
+Reflect.compare = function(a,b) 
+  if (a == b) then 
+    do return 0 end;
+  else
+    if (a == nil) then 
+      do return -1 end;
+    else
+      if (b == nil) then 
+        do return 1 end;
+      else
+        if (a > b) then 
+          do return 1 end;
+        else
+          do return -1 end;
+        end;
+      end;
+    end;
+  end;
+end
+Reflect.isEnumValue = function(v) 
+  if ((v ~= nil) and lua.Boot.__instanceof(v,_G.table)) then 
+    do return v.__enum__ ~= nil end;
+  else
+    do return false end;
+  end;
+end
 
 Request.new = function(request) 
   local self = _hx_new(Request.prototype)
@@ -748,18 +828,53 @@ StaticHandler.new = function()
   return self
 end
 StaticHandler.super = function(self) 
-  self.Paths = Array.new();
+  self.Paths = haxe.ds.StringMap.new();
 end
 StaticHandler.__name__ = true
 StaticHandler.__interfaces__ = {IHandler}
 StaticHandler.prototype = _hx_a(
+  'AddPath', function(self,path) 
+    if (not Fio.Exists(path)) then 
+      _G.error("Directory " .. path .. " not exists",0);
+    end;
+    local parts = path:split("/");
+    local parts1 = parts:filter(function(s) 
+      if ((s ~= "") and (s ~= ".")) then 
+        do return s ~= ".." end;
+      else
+        do return false end;
+      end;
+    end);
+    local newPath = parts1:join("/");
+    local _this = self.Paths;
+    _this.v[newPath] = newPath;
+    _this.k[newPath] = true;
+  end,
   'Process', function(self,context) 
     local path = context.Request.Resource.path;
     local parts = path:split("/");
     local file = parts:pop();
-    local newPath = parts:join("/");
-    haxe.Log.trace(newPath,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true,customParams=true},fileName="StaticHandler.hx",lineNumber=49,className="StaticHandler",methodName="Process",customParams=_hx_tab_array({[0]=file }, 1)}));
-    do return true end
+    local parts1 = parts:filter(function(s) 
+      if ((s ~= "") and (s ~= ".")) then 
+        do return s ~= ".." end;
+      else
+        do return false end;
+      end;
+    end);
+    local newPath = parts1:join("/");
+    local this1 = self.Paths;
+    if ((this1.k[newPath] or false)) then 
+      local fl = "./" .. newPath .. "/" .. file;
+      if (Fio.Exists(fl)) then 
+        local data = Fio.ReadAllBytes(fl);
+        context.Response:Write(data);
+        context.Response:Close();
+        do return true end;
+      else
+        _G.error("Resource not found",0);
+      end;
+    end;
+    do return false end
   end
   ,'__class__',  StaticHandler
 )
@@ -1058,7 +1173,10 @@ TestZephyr.main = function()
     local tmp1 = HtmlBuilder.p(_hx_o({__fields__={text=true},text="Hello world!"}));
     do return _Tag.Tag_Impl_.ToResponse(HtmlBuilder.html(nil,_hx_tab_array({[0]=tmp, HtmlBuilder.body(nil,_hx_tab_array({[0]=HtmlBuilder.div(_hx_o({__fields__={text=true,css=true},text="GOOD",css="shit"}),_hx_tab_array({[0]=tmp1 }, 1)), HtmlBuilder.div() }, 2)) }, 2))) end;
   end);
-  App.Listen(_hx_o({__fields__={port=true},port=8081}));
+  App.OnError(HttpError.NotFound,function(req1) 
+    do return _Response.Response_Impl_._new(AppResponse.string("")) end;
+  end);
+  App.Listen(_hx_o({__fields__={Port=true,StaticDir=true},Port=8081,StaticDir="./out/media"}));
 end
 
 TextTag.new = function(name,options,tags) 
@@ -1319,6 +1437,225 @@ haxe.MainLoop.tick = function()
     end;
   do return wait end;
 end
+
+haxe.ds.BalancedTree.new = function() 
+  local self = _hx_new(haxe.ds.BalancedTree.prototype)
+  haxe.ds.BalancedTree.super(self)
+  return self
+end
+haxe.ds.BalancedTree.super = function(self) 
+end
+haxe.ds.BalancedTree.__name__ = true
+haxe.ds.BalancedTree.prototype = _hx_a(
+  'set', function(self,key,value) 
+    self.root = self:setLoop(key,value,self.root);
+  end,
+  'setLoop', function(self,k,v,node) 
+    if (node == nil) then 
+      do return haxe.ds.TreeNode.new(nil,k,v,nil) end;
+    end;
+    local c = self:compare(k,node.key);
+    if (c == 0) then 
+      do return haxe.ds.TreeNode.new(node.left,k,v,node.right,(function() 
+        local _hx_1
+        if (node == nil) then 
+        _hx_1 = 0; else 
+        _hx_1 = node._height; end
+        return _hx_1
+      end )()) end;
+    else
+      if (c < 0) then 
+        local nl = self:setLoop(k,v,node.left);
+        do return self:balance(nl,node.key,node.value,node.right) end;
+      else
+        local nr = self:setLoop(k,v,node.right);
+        do return self:balance(node.left,node.key,node.value,nr) end;
+      end;
+    end;
+  end,
+  'balance', function(self,l,k,v,r) 
+    local hl = (function() 
+      local _hx_1
+      if (l == nil) then 
+      _hx_1 = 0; else 
+      _hx_1 = l._height; end
+      return _hx_1
+    end )();
+    local hr = (function() 
+      local _hx_2
+      if (r == nil) then 
+      _hx_2 = 0; else 
+      _hx_2 = r._height; end
+      return _hx_2
+    end )();
+    if (hl > (hr + 2)) then 
+      local _this = l.left;
+      local _this1 = l.right;
+      if ((function() 
+        local _hx_3
+        if (_this == nil) then 
+        _hx_3 = 0; else 
+        _hx_3 = _this._height; end
+        return _hx_3
+      end )() >= (function() 
+        local _hx_4
+        if (_this1 == nil) then 
+        _hx_4 = 0; else 
+        _hx_4 = _this1._height; end
+        return _hx_4
+      end )()) then 
+        do return haxe.ds.TreeNode.new(l.left,l.key,l.value,haxe.ds.TreeNode.new(l.right,k,v,r)) end;
+      else
+        do return haxe.ds.TreeNode.new(haxe.ds.TreeNode.new(l.left,l.key,l.value,l.right.left),l.right.key,l.right.value,haxe.ds.TreeNode.new(l.right.right,k,v,r)) end;
+      end;
+    else
+      if (hr > (hl + 2)) then 
+        local _this2 = r.right;
+        local _this3 = r.left;
+        if ((function() 
+          local _hx_5
+          if (_this2 == nil) then 
+          _hx_5 = 0; else 
+          _hx_5 = _this2._height; end
+          return _hx_5
+        end )() > (function() 
+          local _hx_6
+          if (_this3 == nil) then 
+          _hx_6 = 0; else 
+          _hx_6 = _this3._height; end
+          return _hx_6
+        end )()) then 
+          do return haxe.ds.TreeNode.new(haxe.ds.TreeNode.new(l,k,v,r.left),r.key,r.value,r.right) end;
+        else
+          do return haxe.ds.TreeNode.new(haxe.ds.TreeNode.new(l,k,v,r.left.left),r.left.key,r.left.value,haxe.ds.TreeNode.new(r.left.right,r.key,r.value,r.right)) end;
+        end;
+      else
+        do return haxe.ds.TreeNode.new(l,k,v,r,(function() 
+          local _hx_7
+          if (hl > hr) then 
+          _hx_7 = hl; else 
+          _hx_7 = hr; end
+          return _hx_7
+        end )() + 1) end;
+      end;
+    end;
+  end,
+  'compare', function(self,k1,k2) 
+    do return Reflect.compare(k1,k2) end
+  end
+  ,'__class__',  haxe.ds.BalancedTree
+)
+
+haxe.ds.TreeNode.new = function(l,k,v,r,h) 
+  local self = _hx_new(haxe.ds.TreeNode.prototype)
+  haxe.ds.TreeNode.super(self,l,k,v,r,h)
+  return self
+end
+haxe.ds.TreeNode.super = function(self,l,k,v,r,h) 
+  if (h == nil) then 
+    h = -1;
+  end;
+  self.left = l;
+  self.key = k;
+  self.value = v;
+  self.right = r;
+  if (h == -1) then 
+    local tmp;
+    local _this = self.left;
+    local _this1 = self.right;
+    if ((function() 
+      local _hx_1
+      if (_this == nil) then 
+      _hx_1 = 0; else 
+      _hx_1 = _this._height; end
+      return _hx_1
+    end )() > (function() 
+      local _hx_2
+      if (_this1 == nil) then 
+      _hx_2 = 0; else 
+      _hx_2 = _this1._height; end
+      return _hx_2
+    end )()) then 
+      local _this2 = self.left;
+      if (_this2 == nil) then 
+        tmp = 0;
+      else
+        tmp = _this2._height;
+      end;
+    else
+      local _this3 = self.right;
+      if (_this3 == nil) then 
+        tmp = 0;
+      else
+        tmp = _this3._height;
+      end;
+    end;
+    self._height = tmp + 1;
+  else
+    self._height = h;
+  end;
+end
+haxe.ds.TreeNode.__name__ = true
+haxe.ds.TreeNode.prototype = _hx_a(
+  
+  '__class__',  haxe.ds.TreeNode
+)
+
+haxe.ds.EnumValueMap.new = function() 
+  local self = _hx_new(haxe.ds.EnumValueMap.prototype)
+  haxe.ds.EnumValueMap.super(self)
+  return self
+end
+haxe.ds.EnumValueMap.super = function(self) 
+  haxe.ds.BalancedTree.super(self);
+end
+haxe.ds.EnumValueMap.__name__ = true
+haxe.ds.EnumValueMap.__interfaces__ = {haxe.IMap}
+haxe.ds.EnumValueMap.prototype = _hx_a(
+  'compare', function(self,k1,k2) 
+    local d = k1[1] - k2[1];
+    if (d ~= 0) then 
+      do return d end;
+    end;
+    local p1 = k1:slice(2);
+    local p2 = k2:slice(2);
+    if ((p1.length == 0) and (p2.length == 0)) then 
+      do return 0 end;
+    end;
+    do return self:compareArgs(p1,p2) end
+  end,
+  'compareArgs', function(self,a1,a2) 
+    local ld = a1.length - a2.length;
+    if (ld ~= 0) then 
+      do return ld end;
+    end;
+    local _g1 = 0;
+    local _g = a1.length;
+    while (_g1 < _g) do 
+      _g1 = _g1 + 1;
+      local i = _g1 - 1;
+      local d = self:compareArg(a1[i],a2[i]);
+      if (d ~= 0) then 
+        do return d end;
+      end;
+      end;
+    do return 0 end
+  end,
+  'compareArg', function(self,v1,v2) 
+    if (Reflect.isEnumValue(v1) and Reflect.isEnumValue(v2)) then 
+      do return self:compare(v1,v2) end;
+    else
+      if (lua.Boot.__instanceof(v1,Array) and lua.Boot.__instanceof(v2,Array)) then 
+        do return self:compareArgs(v1,v2) end;
+      else
+        do return Reflect.compare(v1,v2) end;
+      end;
+    end;
+  end
+  ,'__class__',  haxe.ds.EnumValueMap
+)
+haxe.ds.EnumValueMap.__super__ = haxe.ds.BalancedTree
+setmetatable(haxe.ds.EnumValueMap.prototype,{__index=haxe.ds.BalancedTree.prototype})
 
 haxe.ds.StringMap.new = function() 
   local self = _hx_new(haxe.ds.StringMap.prototype)
@@ -1945,17 +2282,21 @@ do
 
 App._httpServer = HttpServer.new();
 App._routes = haxe.ds.StringMap.new();
+App._errorHandlers = haxe.ds.EnumValueMap.new();
 if (lua.lib.lrexlib.Rex == nil) then 
   _G.error("Rex is missing.  Please install lrexlib-pcre.",0);
 end;
+Fio._module = require("fio");
 String.prototype.__class__ = String;
 String.__name__ = true;
 Array.__name__ = true;
 App._httpServer = HttpServer.new();
 App._routes = haxe.ds.StringMap.new();
+App._errorHandlers = haxe.ds.EnumValueMap.new();
 if (lua.lib.lrexlib.Rex == nil) then 
   _G.error("Rex is missing.  Please install lrexlib-pcre.",0);
 end;
+Fio._module = require("fio");
 String.prototype.__class__ = String;
 String.__name__ = true;
 Array.__name__ = true;

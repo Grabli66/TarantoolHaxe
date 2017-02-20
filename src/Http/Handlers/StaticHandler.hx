@@ -42,7 +42,11 @@ class StaticHandler implements IHandler {
      *  @param path - relative path from working dir
      */
     public function AddPath (path : String) {
-        Paths.set (path, path);
+        if (!Fio.Exists (path)) throw 'Directory ${path} not exists';
+        var parts = path.split ("/");
+        var parts = parts.filter (function (s : String) { return s != "" && s != "." && s != ".."; });
+        var newPath = parts.join ("/");        
+        Paths.set (newPath, newPath);
     }
 
     /**
@@ -53,14 +57,21 @@ class StaticHandler implements IHandler {
         var path : String = context.Request.Resource.path;
         var parts = path.split ("/");
         var file = parts.pop ();
+        var parts = parts.filter (function (s : String) { return s != "" && s != "." && s != ".."; });
         var newPath = parts.join ("/");
-
-        trace (newPath);
+        
         if (Paths.exists (newPath)) {
-            var fl = '${newPath}/${file}';
-            trace (fl);
+            var fl = './${newPath}/${file}';
+            if (Fio.Exists (fl)) {
+                var data = Fio.ReadAllBytes (fl);
+                context.Response.Write (data);
+                context.Response.Close ();
+                return true;
+            } else {
+                throw "Resource not found";
+            }
         }
 
-        return true;
+        return false;
     }
 }

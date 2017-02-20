@@ -1,6 +1,7 @@
 -cp test
 -cp src/Tarantool
 -cp src/Tarantool/Socket
+-cp src/Tarantool/Fio
 -cp src/Http
 -cp src/Http/Handlers
 -cp src/Chocolate

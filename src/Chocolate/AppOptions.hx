@@ -26,5 +26,10 @@ typedef AppOptions = {
     /**
      *  Port to listen
      */
-    port : Int
+    Port : Int,
+
+    /**
+     *  Dir for static content
+     */
+    ?StaticDir : String
 }

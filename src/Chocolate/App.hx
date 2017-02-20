@@ -35,11 +35,17 @@ class App {
     private static var _routes : Map<String, Route>;
 
     /**
+     *  On error callback
+     */
+    private static var _errorHandlers : Map<HttpError, RequestCall>;
+
+    /**
      *  On init class
      */
     private static function __init__ () : Void {
         _httpServer = new HttpServer ();
         _routes = new Map<String, Route> ();
+        _errorHandlers = new Map<HttpError, RequestCall> ();
     }
     
     /**
@@ -88,15 +94,28 @@ class App {
     }
 
     /**
+     *  For process http error
+     *  @param err - error type
+     *  @param call - callback to process error
+     */
+    public static function OnError (err : HttpError, call : RequestCall) : Void {
+        _errorHandlers[err] = call;
+    }
+
+    /**
      *  Start listen
      *  @param options - various options like port to listen
      */
     public static function Listen (options : AppOptions) {
         var httpHandler = new HttpHandler (OnHttpRequest);
-        var staticHandler = new StaticHandler ();
-        staticHandler.AddPath ("css");
-        _httpServer.AddHandler (httpHandler);
-        _httpServer.AddHandler (staticHandler);
-        _httpServer.Bind ("*", options.port);
+
+        if (options.StaticDir != null) {
+            var staticHandler = new StaticHandler ();
+            staticHandler.AddPath (options.StaticDir);
+            _httpServer.AddHandler (staticHandler);
+        }
+        
+        _httpServer.AddHandler (httpHandler);        
+        _httpServer.Bind ("*", options.Port);
     }
 }

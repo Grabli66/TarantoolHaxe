@@ -20,31 +20,8 @@
 */
 
 /**
- *  Process http request
+ *  Handle errors
  */
-class HttpHandler implements IHandler {
-    /**
-     *  On request callback
-     */
-    private var _onRequest : HttpContext -> Void;
-
-    /**
-     *  Constructor
-     *  @param call - callback on request
-     */
-    public function new (call : HttpContext -> Void) {
-        _onRequest = call;
-    }
-
-    /**
-     *  Process request
-     *  @param context - Http context
-     */
-    public function Process (context : HttpContext) : Bool {
-        if (_onRequest != null) {
-            _onRequest (context);
-            context.Response.Close ();
-        }
-        return true;
-    }
+class ErrorHandler {
+    
 }
