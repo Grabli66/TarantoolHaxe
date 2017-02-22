@@ -21,10 +21,22 @@ class HttpResponse implements IWriteChannel {
     public var Headers (default, null) : Map<String, String>;
 
     /**
+     *  Response status
+     */
+    public var Status : HttpStatus = HttpStatus.Ok;
+
+    /**
         Constructor
     **/
     public function new (channel : IRWChannel) {
         _channel = channel;
+        Reset ();
+    }
+
+    /**
+     *  Reset response
+     */
+    public function Reset () {
         _buffer = new BytesBuffer ();
     }
 
@@ -48,7 +60,8 @@ class HttpResponse implements IWriteChannel {
         Close channel
     **/
     public function Close () : Void {
-        _channel.WriteString ("HTTP/1.1 200 OK\n");
+        var descr = Status.GetDescription ();
+        _channel.WriteString ('HTTP/1.1 ${Status} ${descr}\n');
         _channel.WriteString ('Content-Length: ${_buffer.length}');
         _channel.WriteString ("\n\n");
         _channel.Write (_buffer.getBytes ());

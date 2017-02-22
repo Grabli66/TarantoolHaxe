@@ -19,12 +19,10 @@
  * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-using StringTools;
-
 /**
  *  Process static content
  */
-class StaticHandler implements IHandler {
+class StaticHandler extends Handler {
     /**
      *  Paths to process
      */
@@ -53,7 +51,7 @@ class StaticHandler implements IHandler {
      *  Process request
      *  @param context - Http context
      */
-    public function Process (context : HttpContext) : Bool {
+    public override function Process (context : HttpContext) : Void {
         var path : String = context.Request.Resource.path;
         var parts = path.split ("/");
         var file = parts.pop ();
@@ -66,12 +64,11 @@ class StaticHandler implements IHandler {
                 var data = Fio.ReadAllBytes (fl);
                 context.Response.Write (data);
                 context.Response.Close ();
-                return true;
             } else {
-                throw "Resource not found";
+                throw HttpStatus.NotFound;
             }
-        }
-
-        return false;
+        } else {
+            CallNext (context);
+        }        
     }
 }

@@ -20,51 +20,12 @@
 */
 
 /**
- *  Handle errors
+ *  Web socket
  */
-class ErrorHandler extends Handler {
-    /**
-     *  Callback to process error
-     */
-    private var _onError : HttpContext -> HttpStatus -> Void;
-
-    /**
-     *  Process error
-     */
-    private function ProcessError (c : HttpContext, err : HttpStatus) {
-        c.Response.Reset ();
-        c.Response.Status = err;
-
-        if (_onError != null) {
-            try {                
-                _onError (c, err);
-            } catch (e : Dynamic) {
-                c.Response.Reset ();
-                c.Response.Status = HttpStatus.Internal;
-            }
-        }            
-
-        c.Response.Close ();
-    }
-
+class WebSocket {
     /**
      *  Constructor
      */
-    public function new (call : HttpContext -> HttpStatus -> Void) {
-        _onError = call;
-    }    
-
-    /**
-     *  Process request
-     *  @param context - Http context
-     */
-    public override function Process (context : HttpContext) : Void {
-        try {
-            CallNext (context);
-        } catch (e : HttpStatus) {
-            ProcessError (context, e);
-        } catch (e : Dynamic) {
-            ProcessError (context, HttpStatus.Internal);
-        }
+    public function new () {
     }
 }

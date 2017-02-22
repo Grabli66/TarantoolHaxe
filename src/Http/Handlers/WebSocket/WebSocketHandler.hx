@@ -20,9 +20,8 @@
 */
 
 /**
- *  Http error
+ *  Web socket handler for http server
  */
-enum HttpError {
-    Internal;
-    NotFound;
+class WebSocketHandler extends Handler {
+    
 }

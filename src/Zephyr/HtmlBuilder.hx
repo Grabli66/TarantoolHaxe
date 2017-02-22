@@ -70,4 +70,14 @@ class HtmlBuilder {
     public static function p (?options : TextTagOptions, ?tags : Array<Tag>) : Tag {
         return new TextTag ("p", options, tags);
     }
+
+    /**
+     *  Create <h1> tag
+     *  @param text - 
+     *  @param tags - 
+     *  @return Tag
+     */
+    public static function h1 (?options : TextTagOptions, ?tags : Array<Tag>) : Tag {
+        return new TextTag ("h1", options, tags);
+    }
 }

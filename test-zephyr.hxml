@@ -4,6 +4,7 @@
 -cp src/Tarantool/Fio
 -cp src/Http
 -cp src/Http/Handlers
+-cp src/Http/Handlers/WebSocket
 -cp src/Chocolate
 -cp src/Zephyr
 -lib tink_url

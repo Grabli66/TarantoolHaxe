@@ -55,24 +55,27 @@ Class = (function()
 _hxClasses.Class = _hx_o({__fields__={__name__=true},__name__={"Class"}}); return _hxClasses.Class end)();
 Enum = _hx_e();
 
+local Array = _hx_e()
 local HttpServer = _hx_e()
 local IChannel = _hx_e()
 local IWriteChannel = _hx_e()
 local IReadChannel = _hx_e()
 local IRWChannel = _hx_e()
 local TcpSocket = _hx_e()
-local Array = _hx_e()
-local App = _hx_e()
+local WebSocket = _hx_e()
+local Chocolate = _hx_e()
 local EReg = _hx_e()
+local Handler = _hx_e()
+local ErrorHandler = _hx_e()
 local Fio = _hx_e()
 local HtmlBuilder = _hx_e()
 local HttpContext = _hx_e()
-local HttpError = _hx_e()
-local IHandler = _hx_e()
 local HttpHandler = _hx_e()
 local HttpMethod = _hx_e()
 local HttpRequest = _hx_e()
 local HttpResponse = _hx_e()
+local _HttpStatus = {}
+_HttpStatus.HttpStatus_Impl_ = _hx_e()
 local JsonResponse = _hx_e()
 local Math = _hx_e()
 local Peer = _hx_e()
@@ -105,9 +108,7 @@ haxe.Log = _hx_e()
 haxe.MainEvent = _hx_e()
 haxe.MainLoop = _hx_e()
 haxe.ds = {}
-haxe.ds.BalancedTree = _hx_e()
-haxe.ds.TreeNode = _hx_e()
-haxe.ds.EnumValueMap = _hx_e()
+haxe.ds.IntMap = _hx_e()
 haxe.ds.StringMap = _hx_e()
 haxe.io = {}
 haxe.io.Bytes = _hx_e()
@@ -129,144 +130,6 @@ tink.url._Path = {}
 tink.url._Path.Path_Impl_ = _hx_e()
 
 local _hx_bind, _hx_bit, _hx_staticToInstance, _hx_funcToField, _hx_maxn, _hx_print, _hx_apply_self, _hx_box_mr, _hx_bit_clamp, _hx_table, _hx_bit_raw
-
-HttpServer.new = function() 
-  local self = _hx_new(HttpServer.prototype)
-  HttpServer.super(self)
-  return self
-end
-HttpServer.super = function(self) 
-  self._socket = TcpSocket.new();
-  self._handlers = Array.new();
-end
-HttpServer.__name__ = true
-HttpServer.prototype = _hx_a(
-  'ProcessClient', function(self,peer,channel) 
-    local _hx_expected_result = {}
-    local _hx_status, _hx_result = pcall(function() 
-    
-        while (true) do 
-          local request = HttpRequest.new(channel);
-          local response = HttpResponse.new(channel);
-          local context = HttpContext.new(request,response);
-          local found = false;
-          local _g = 0;
-          local _g1 = self._handlers;
-          while (_g < _g1.length) do 
-            local h = _g1[_g];
-            _g = _g + 1;
-            if (h:Process(context)) then 
-              found = true;
-              break;
-            end;
-            end;
-          if (not found) then 
-            _G.error("Not found",0);
-          end;
-          end;
-       return _hx_expected_result end)
-     if not _hx_status then 
-      local _hx_1 = _hx_result
-      local e = _hx_1
-      haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="HttpServer.hx",lineNumber=38,className="HttpServer",methodName="ProcessClient"}));
-      channel:Close();
-     elseif _hx_result ~= _hx_expected_result then return _hx_result end;
-  end,
-  'AddHandler', function(self,handler) 
-    self._handlers:push(handler);
-  end,
-  'Bind', function(self,host,port) 
-    local _gthis = self;
-    if (self._handlers.length < 1) then 
-      _G.error("No handlers",0);
-    end;
-    self._socket:Bind(host,port,function(p,c) 
-      _gthis:ProcessClient(p,c);
-    end);
-  end
-  ,'__class__',  HttpServer
-)
-
-IChannel.new = {}
-IChannel.__name__ = true
-IChannel.prototype = _hx_a(
-  
-  '__class__',  IChannel
-)
-
-IWriteChannel.new = {}
-IWriteChannel.__name__ = true
-IWriteChannel.__interfaces__ = {IChannel}
-IWriteChannel.prototype = _hx_a(
-  
-  '__class__',  IWriteChannel
-)
-
-IReadChannel.new = {}
-IReadChannel.__name__ = true
-IReadChannel.__interfaces__ = {IChannel}
-IReadChannel.prototype = _hx_a(
-  
-  '__class__',  IReadChannel
-)
-
-IRWChannel.new = {}
-IRWChannel.__name__ = true
-IRWChannel.__interfaces__ = {IWriteChannel,IReadChannel}
-
-TcpSocket.new = function(luaSock) 
-  local self = _hx_new(TcpSocket.prototype)
-  TcpSocket.super(self,luaSock)
-  return self
-end
-TcpSocket.super = function(self,luaSock) 
-  if (luaSock ~= nil) then 
-    self._sock = luaSock;
-  else
-    self._module = require("socket");
-  end;
-end
-TcpSocket.__name__ = true
-TcpSocket.__interfaces__ = {IRWChannel}
-TcpSocket.prototype = _hx_a(
-  'Read', function(self,size) 
-    local res = self._sock:read(size);
-    if (res == "") then 
-      do return nil end;
-    end;
-    if (res == nil) then 
-      _G.error("Socket error",0);
-    end;
-    do return haxe.io.Bytes.ofString(res) end
-  end,
-  'Write', function(self,data) 
-    local s = data:toString();
-    do return self._sock:write(s) end
-  end,
-  'WriteString', function(self,data) 
-    do return self._sock:write(data) end
-  end,
-  'ReadUntil', function(self,delimeter) 
-    local res = self._sock:read(delimeter);
-    if (res == "") then 
-      do return nil end;
-    end;
-    if (res == nil) then 
-      _G.error("Socket error",0);
-    end;
-    do return res end
-  end,
-  'Close', function(self) 
-    self._sock:shutdown();
-  end,
-  'Bind', function(self,host,port,handler) 
-    self._sock = self._module.tcp_server(host,port,function(s,e) 
-      local tmp = Peer.new();
-      handler(tmp,TcpSocket.new(s));
-    end);
-  end
-  ,'__class__',  TcpSocket
-)
 
 Array.new = function() 
   local self = _hx_new(Array.prototype)
@@ -361,52 +224,217 @@ Array.prototype = _hx_a(
   ,'__class__',  Array
 )
 
-App.new = {}
-App.__name__ = true
-App.WriteResponse = function(c,response) 
-  c.Response:WriteString(_Response.Response_Impl_.ToString(response));
+HttpServer.new = function() 
+  local self = _hx_new(HttpServer.prototype)
+  HttpServer.super(self)
+  return self
 end
-App.OnHttpRequest = function(c) 
-  local _hx_expected_result = {}
-  local _hx_status, _hx_result = pcall(function() 
+HttpServer.super = function(self) 
+  self._socket = TcpSocket.new();
+end
+HttpServer.__name__ = true
+HttpServer.prototype = _hx_a(
+  'ProcessClient', function(self,peer,channel) 
+    local _hx_expected_result = {}
+    local _hx_status, _hx_result = pcall(function() 
+    
+        while (true) do 
+          local request = HttpRequest.new(channel);
+          local response = HttpResponse.new(channel);
+          local context = HttpContext.new(request,response);
+          self._firstHandler:Process(context);
+          end;
+       return _hx_expected_result end)
+     if not _hx_status then 
+      local _hx_1 = _hx_result
+      local e = _hx_1
+      haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="HttpServer.hx",lineNumber=34,className="HttpServer",methodName="ProcessClient"}));
+      channel:Close();
+     elseif _hx_result ~= _hx_expected_result then return _hx_result end;
+  end,
+  'AddHandler', function(self,handler) 
+    if (self._firstHandler == nil) then 
+      self._firstHandler = handler;
+      self._lastHandler = handler;
+    end;
+    self._lastHandler.Next = handler;
+    self._lastHandler = handler;
+  end,
+  'Bind', function(self,host,port) 
+    local _gthis = self;
+    if (self._firstHandler == nil) then 
+      _G.error("No handlers",0);
+    end;
+    self._socket:Bind(host,port,function(p,c) 
+      _gthis:ProcessClient(p,c);
+    end);
+  end
+  ,'__class__',  HttpServer
+)
+
+IChannel.new = {}
+IChannel.__name__ = true
+IChannel.prototype = _hx_a(
   
-      local kv = App._routes:iterator();
-      while (kv:hasNext()) do 
-        local kv1 = kv:next();
-        if (kv1:IsMatch(tink._Url.Url_Impl_.toString(c.Request.Resource))) then 
-          local req = Request.new(c.Request);
-          local resp = kv1:Process(req);
-          App.WriteResponse(c,resp);
-          break;
-        end;
-        end;
-     return _hx_expected_result end)
-   if not _hx_status then 
-    local _hx_1 = _hx_result
-    local e = _hx_1
-    haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="App.hx",lineNumber=74,className="App",methodName="OnHttpRequest"}));
-   elseif _hx_result ~= _hx_expected_result then return _hx_result end;
+  '__class__',  IChannel
+)
+
+IWriteChannel.new = {}
+IWriteChannel.__name__ = true
+IWriteChannel.__interfaces__ = {IChannel}
+IWriteChannel.prototype = _hx_a(
+  
+  '__class__',  IWriteChannel
+)
+
+IReadChannel.new = {}
+IReadChannel.__name__ = true
+IReadChannel.__interfaces__ = {IChannel}
+IReadChannel.prototype = _hx_a(
+  
+  '__class__',  IReadChannel
+)
+
+IRWChannel.new = {}
+IRWChannel.__name__ = true
+IRWChannel.__interfaces__ = {IWriteChannel,IReadChannel}
+
+TcpSocket.new = function(luaSock) 
+  local self = _hx_new(TcpSocket.prototype)
+  TcpSocket.super(self,luaSock)
+  return self
 end
-App.Get = function(pattern,call) 
-  local this1 = App._routes;
-  local v = Route.new(pattern,call);
-  local _this = this1;
-  _this.v[pattern] = v;
-  _this.k[pattern] = true;
-end
-App.OnError = function(err,call) 
-  App._errorHandlers:set(err,call);
-end
-App.Listen = function(options) 
-  local httpHandler = HttpHandler.new(App.OnHttpRequest);
-  if (options.StaticDir ~= nil) then 
-    local staticHandler = StaticHandler.new();
-    staticHandler:AddPath(options.StaticDir);
-    App._httpServer:AddHandler(staticHandler);
+TcpSocket.super = function(self,luaSock) 
+  if (luaSock ~= nil) then 
+    self._sock = luaSock;
+  else
+    self._module = require("socket");
   end;
-  App._httpServer:AddHandler(httpHandler);
-  App._httpServer:Bind("*",options.Port);
 end
+TcpSocket.__name__ = true
+TcpSocket.__interfaces__ = {IRWChannel}
+TcpSocket.prototype = _hx_a(
+  'Read', function(self,size) 
+    local res = self._sock:read(size);
+    if (res == "") then 
+      do return nil end;
+    end;
+    if (res == nil) then 
+      _G.error("Socket error",0);
+    end;
+    do return haxe.io.Bytes.ofString(res) end
+  end,
+  'Write', function(self,data) 
+    local s = data:toString();
+    do return self._sock:write(s) end
+  end,
+  'WriteString', function(self,data) 
+    do return self._sock:write(data) end
+  end,
+  'ReadUntil', function(self,delimeter) 
+    local res = self._sock:read(delimeter);
+    if (res == "") then 
+      do return nil end;
+    end;
+    if (res == nil) then 
+      _G.error("Socket error",0);
+    end;
+    do return res end
+  end,
+  'Close', function(self) 
+    self._sock:shutdown();
+  end,
+  'Bind', function(self,host,port,handler) 
+    self._sock = self._module.tcp_server(host,port,function(s,e) 
+      local tmp = Peer.new();
+      handler(tmp,TcpSocket.new(s));
+    end);
+  end
+  ,'__class__',  TcpSocket
+)
+
+WebSocket.new = function() 
+  local self = _hx_new(WebSocket.prototype)
+  WebSocket.super(self)
+  return self
+end
+WebSocket.super = function(self) 
+end
+WebSocket.__name__ = true
+WebSocket.prototype = _hx_a(
+  
+  '__class__',  WebSocket
+)
+
+Chocolate.new = function() 
+  local self = _hx_new(Chocolate.prototype)
+  Chocolate.super(self)
+  return self
+end
+Chocolate.super = function(self) 
+  self._httpServer = HttpServer.new();
+  self._routes = haxe.ds.StringMap.new();
+  self._errorHandlers = haxe.ds.IntMap.new();
+  self.WebSocket = WebSocket.new();
+end
+Chocolate.__name__ = true
+Chocolate.prototype = _hx_a(
+  'OnHttpError', function(self,c,error) 
+    if (self._errorHandlers:exists(error)) then 
+      local call = self._errorHandlers:get(error);
+      local req = Request.new(c.Request);
+      local resp = call(req);
+      self:WriteResponse(c,resp);
+    end;
+  end,
+  'WriteResponse', function(self,c,response) 
+    c.Response:WriteString(_Response.Response_Impl_.ToString(response));
+  end,
+  'OnHttpRequest', function(self,c) 
+    local _hx_expected_result = {}
+    local _hx_status, _hx_result = pcall(function() 
+    
+        local kv = self._routes:iterator();
+        while (kv:hasNext()) do 
+          local kv1 = kv:next();
+          if (kv1:IsMatch(tink._Url.Url_Impl_.toString(c.Request.Resource))) then 
+            local req = Request.new(c.Request);
+            local resp = kv1:Process(req);
+            self:WriteResponse(c,resp);
+            break;
+          end;
+          end;
+       return _hx_expected_result end)
+     if not _hx_status then 
+      local _hx_1 = _hx_result
+      local e = _hx_1
+      haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="Chocolate.hx",lineNumber=103,className="Chocolate",methodName="OnHttpRequest"}));
+     elseif _hx_result ~= _hx_expected_result then return _hx_result end;
+  end,
+  'Get', function(self,pattern,call) 
+    local this1 = self._routes;
+    local v = Route.new(pattern,call);
+    local _this = this1;
+    _this.v[pattern] = v;
+    _this.k[pattern] = true;
+  end,
+  'OnError', function(self,err,call) 
+    self._errorHandlers:set(err,call);
+  end,
+  'Listen', function(self,options) 
+    local httpHandler = HttpHandler.new(_hx_bind(self,self.OnHttpRequest));
+    local errorHandler = ErrorHandler.new(_hx_bind(self,self.OnHttpError));
+    self._httpServer:AddHandler(errorHandler);
+    if (options.StaticDir ~= nil) then 
+      local staticHandler = StaticHandler.new();
+      staticHandler:AddPath(options.StaticDir);
+      self._httpServer:AddHandler(staticHandler);
+    end;
+    self._httpServer:AddHandler(httpHandler);
+    self._httpServer:Bind("*",options.Port);
+  end
+  ,'__class__',  Chocolate
+)
 lua.lib = {}
 lua.lib.lrexlib = {}
 lua.lib.lrexlib.Rex = _G.require("rex_pcre")
@@ -474,6 +502,69 @@ EReg.prototype = _hx_a(
   ,'__class__',  EReg
 )
 
+Handler.new = {}
+Handler.__name__ = true
+Handler.prototype = _hx_a(
+  'Process', function(self,context) 
+  end,
+  'CallNext', function(self,context) 
+    if (self.Next ~= nil) then 
+      self.Next:Process(context);
+    end;
+  end
+  ,'__class__',  Handler
+)
+
+ErrorHandler.new = function(call) 
+  local self = _hx_new(ErrorHandler.prototype)
+  ErrorHandler.super(self,call)
+  return self
+end
+ErrorHandler.super = function(self,call) 
+  self._onError = _hx_funcToField(call);
+end
+ErrorHandler.__name__ = true
+ErrorHandler.prototype = _hx_a(
+  'ProcessError', function(self,c,err) 
+    c.Response:Reset();
+    c.Response.Status = err;
+    if (self._onError ~= nil) then 
+      local _hx_expected_result = {}
+      local _hx_status, _hx_result = pcall(function() 
+      
+          self:_onError(c,err);
+         return _hx_expected_result end)
+       if not _hx_status then 
+        local _hx_1 = _hx_result
+        local e = _hx_1
+        c.Response:Reset();
+        c.Response.Status = 500;
+       elseif _hx_result ~= _hx_expected_result then return _hx_result end;
+    end;
+    c.Response:Close();
+  end,
+  'Process', function(self,context) 
+    local _hx_expected_result = {}
+    local _hx_status, _hx_result = pcall(function() 
+    
+        self:CallNext(context);
+       return _hx_expected_result end)
+     if not _hx_status then 
+      local _hx_1 = _hx_result
+      if( lua.Boot.__instanceof(_hx_1,Int) ) then 
+        local e = _hx_1
+        self:ProcessError(context,e);
+      else
+      local e1 = _hx_1
+      self:ProcessError(context,500);
+       end 
+     elseif _hx_result ~= _hx_expected_result then return _hx_result end;
+  end
+  ,'__class__',  ErrorHandler
+)
+ErrorHandler.__super__ = Handler
+setmetatable(ErrorHandler.prototype,{__index=Handler.prototype})
+
 Fio.new = {}
 Fio.__name__ = true
 Fio.Exists = function(path) 
@@ -507,6 +598,9 @@ end
 HtmlBuilder.p = function(options,tags) 
   do return _Tag.Tag_Impl_.FromTag(TextTag.new("p",options,tags)) end;
 end
+HtmlBuilder.h1 = function(options,tags) 
+  do return _Tag.Tag_Impl_.FromTag(TextTag.new("h1",options,tags)) end;
+end
 
 HttpContext.new = function(request,response) 
   local self = _hx_new(HttpContext.prototype)
@@ -522,19 +616,6 @@ HttpContext.prototype = _hx_a(
   
   '__class__',  HttpContext
 )
-_hxClasses["HttpError"] = { __ename__ = true, __constructs__ = _hx_tab_array({[0]="Internal","NotFound"},2)}
-HttpError = _hxClasses["HttpError"];
-HttpError.Internal = _hx_tab_array({[0]="Internal",0,__enum__ = HttpError},2)
-
-HttpError.NotFound = _hx_tab_array({[0]="NotFound",1,__enum__ = HttpError},2)
-
-
-IHandler.new = {}
-IHandler.__name__ = true
-IHandler.prototype = _hx_a(
-  
-  '__class__',  IHandler
-)
 
 HttpHandler.new = function(call) 
   local self = _hx_new(HttpHandler.prototype)
@@ -545,17 +626,17 @@ HttpHandler.super = function(self,call)
   self._onRequest = _hx_funcToField(call);
 end
 HttpHandler.__name__ = true
-HttpHandler.__interfaces__ = {IHandler}
 HttpHandler.prototype = _hx_a(
   'Process', function(self,context) 
     if (self._onRequest ~= nil) then 
       self:_onRequest(context);
       context.Response:Close();
     end;
-    do return true end
   end
   ,'__class__',  HttpHandler
 )
+HttpHandler.__super__ = Handler
+setmetatable(HttpHandler.prototype,{__index=Handler.prototype})
 _hxClasses["HttpMethod"] = { __ename__ = true, __constructs__ = _hx_tab_array({[0]="get","post","put","delete"},4)}
 HttpMethod = _hxClasses["HttpMethod"];
 HttpMethod.get = _hx_tab_array({[0]="get",0,__enum__ = HttpMethod},2)
@@ -573,17 +654,8 @@ HttpRequest.new = function(channel)
   return self
 end
 HttpRequest.super = function(self,channel) 
-  local _hx_expected_result = {}
-  local _hx_status, _hx_result = pcall(function() 
-  
-      self:ReadHeaders(channel);
-      self:ReadBody(channel);
-     return _hx_expected_result end)
-   if not _hx_status then 
-    local _hx_1 = _hx_result
-    local e = _hx_1
-    _G.error("Bad request",0);
-   elseif _hx_result ~= _hx_expected_result then return _hx_result end;
+  self:ReadHeaders(channel);
+  self:ReadBody(channel);
 end
 HttpRequest.__name__ = true
 HttpRequest.prototype = _hx_a(
@@ -591,7 +663,7 @@ HttpRequest.prototype = _hx_a(
     local line = StringTools.trim(channel:ReadUntil("\n"));
     local parts = line:split(" ");
     if (parts.length ~= 3) then 
-      _G.error("Bad request",0);
+      _G.error(400,0);
     end;
     self.Method = Type.createEnum(HttpMethod,parts[0]:toLowerCase(),nil);
     self.Resource = tink._Url.Url_Impl_.parse(parts[1]);
@@ -601,7 +673,7 @@ HttpRequest.prototype = _hx_a(
     while (line.length > 0) do 
       local head = line:split(": ");
       if (head.length < 2) then 
-        _G.error("Bad request",0);
+        _G.error(400,0);
       end;
       local v = head[1];
       local _this = self.Headers;
@@ -635,12 +707,16 @@ HttpResponse.new = function(channel)
   return self
 end
 HttpResponse.super = function(self,channel) 
+  self.Status = 200;
   self._channel = channel;
-  self._buffer = haxe.io.BytesBuffer.new();
+  self:Reset();
 end
 HttpResponse.__name__ = true
 HttpResponse.__interfaces__ = {IWriteChannel}
 HttpResponse.prototype = _hx_a(
+  'Reset', function(self) 
+    self._buffer = haxe.io.BytesBuffer.new();
+  end,
   'Write', function(self,data) 
     local _this = self._buffer;
     local len = data.length;
@@ -673,13 +749,29 @@ HttpResponse.prototype = _hx_a(
     do return data.length end
   end,
   'Close', function(self) 
-    self._channel:WriteString("HTTP/1.1 200 OK\n");
+    local descr = _HttpStatus.HttpStatus_Impl_.GetDescription(self.Status);
+    self._channel:WriteString("HTTP/1.1 " .. self.Status .. " " .. descr .. "\n");
     self._channel:WriteString("Content-Length: " .. self._buffer.b.length);
     self._channel:WriteString("\n\n");
     self._channel:Write(self._buffer:getBytes());
   end
   ,'__class__',  HttpResponse
 )
+
+_HttpStatus.HttpStatus_Impl_.new = {}
+_HttpStatus.HttpStatus_Impl_.__name__ = true
+_HttpStatus.HttpStatus_Impl_.GetDescription = function(this1) 
+  local this2 = this1;
+  if (this2) == 200 then 
+    do return "OK" end;
+  elseif (this2) == 400 then 
+    do return "Bad request" end;
+  elseif (this2) == 404 then 
+    do return "Not found" end;
+  elseif (this2) == 500 then 
+    do return "Internal error" end; end;
+  do return "Unknown" end;
+end
 
 JsonResponse.new = {}
 JsonResponse.__name__ = true
@@ -738,32 +830,6 @@ Reflect.isFunction = function(f)
       _hx_2 = f.__ename__; end
       return _hx_2
     end )()) end;
-  else
-    do return false end;
-  end;
-end
-Reflect.compare = function(a,b) 
-  if (a == b) then 
-    do return 0 end;
-  else
-    if (a == nil) then 
-      do return -1 end;
-    else
-      if (b == nil) then 
-        do return 1 end;
-      else
-        if (a > b) then 
-          do return 1 end;
-        else
-          do return -1 end;
-        end;
-      end;
-    end;
-  end;
-end
-Reflect.isEnumValue = function(v) 
-  if ((v ~= nil) and lua.Boot.__instanceof(v,_G.table)) then 
-    do return v.__enum__ ~= nil end;
   else
     do return false end;
   end;
@@ -831,7 +897,6 @@ StaticHandler.super = function(self)
   self.Paths = haxe.ds.StringMap.new();
 end
 StaticHandler.__name__ = true
-StaticHandler.__interfaces__ = {IHandler}
 StaticHandler.prototype = _hx_a(
   'AddPath', function(self,path) 
     if (not Fio.Exists(path)) then 
@@ -869,15 +934,17 @@ StaticHandler.prototype = _hx_a(
         local data = Fio.ReadAllBytes(fl);
         context.Response:Write(data);
         context.Response:Close();
-        do return true end;
       else
-        _G.error("Resource not found",0);
+        _G.error(404,0);
       end;
+    else
+      self:CallNext(context);
     end;
-    do return false end
   end
   ,'__class__',  StaticHandler
 )
+StaticHandler.__super__ = Handler
+setmetatable(StaticHandler.prototype,{__index=Handler.prototype})
 
 String.new = {}
 String.__name__ = true
@@ -1168,15 +1235,15 @@ TagInternal.prototype = _hx_a(
 TestZephyr.new = {}
 TestZephyr.__name__ = true
 TestZephyr.main = function() 
-  App.Get("/",function(req) 
+  Chocolate.App:Get("/",function(req) 
     local tmp = HtmlBuilder.head();
     local tmp1 = HtmlBuilder.p(_hx_o({__fields__={text=true},text="Hello world!"}));
     do return _Tag.Tag_Impl_.ToResponse(HtmlBuilder.html(nil,_hx_tab_array({[0]=tmp, HtmlBuilder.body(nil,_hx_tab_array({[0]=HtmlBuilder.div(_hx_o({__fields__={text=true,css=true},text="GOOD",css="shit"}),_hx_tab_array({[0]=tmp1 }, 1)), HtmlBuilder.div() }, 2)) }, 2))) end;
   end);
-  App.OnError(HttpError.NotFound,function(req1) 
-    do return _Response.Response_Impl_._new(AppResponse.string("")) end;
+  Chocolate.App:OnError(404,function(req1) 
+    do return _Tag.Tag_Impl_.ToResponse(HtmlBuilder.html(nil,_hx_tab_array({[0]=HtmlBuilder.head(), HtmlBuilder.body(nil,_hx_tab_array({[0]=HtmlBuilder.h1(_hx_o({__fields__={text=true},text="Not found!"})) }, 1)) }, 2))) end;
   end);
-  App.Listen(_hx_o({__fields__={Port=true,StaticDir=true},Port=8081,StaticDir="./out/media"}));
+  Chocolate.App:Listen(_hx_o({__fields__={Port=true,StaticDir=true},Port=8081,StaticDir="./out/media"}));
 end
 
 TextTag.new = function(name,options,tags) 
@@ -1263,6 +1330,10 @@ haxe.StackItem.LocalFunction = function(v) local _x = _hx_tab_array({[0]="LocalF
 
 haxe.IMap.new = {}
 haxe.IMap.__name__ = true
+haxe.IMap.prototype = _hx_a(
+  
+  '__class__',  haxe.IMap
+)
 
 haxe._EntryPoint.Lock.new = function() 
   local self = _hx_new(haxe._EntryPoint.Lock.prototype)
@@ -1438,224 +1509,34 @@ haxe.MainLoop.tick = function()
   do return wait end;
 end
 
-haxe.ds.BalancedTree.new = function() 
-  local self = _hx_new(haxe.ds.BalancedTree.prototype)
-  haxe.ds.BalancedTree.super(self)
+haxe.ds.IntMap.new = function() 
+  local self = _hx_new(haxe.ds.IntMap.prototype)
+  haxe.ds.IntMap.super(self)
   return self
 end
-haxe.ds.BalancedTree.super = function(self) 
+haxe.ds.IntMap.super = function(self) 
+  self.h = _hx_e();
 end
-haxe.ds.BalancedTree.__name__ = true
-haxe.ds.BalancedTree.prototype = _hx_a(
+haxe.ds.IntMap.__name__ = true
+haxe.ds.IntMap.__interfaces__ = {haxe.IMap}
+haxe.ds.IntMap.prototype = _hx_a(
   'set', function(self,key,value) 
-    self.root = self:setLoop(key,value,self.root);
+    self.h[key] = value;
   end,
-  'setLoop', function(self,k,v,node) 
-    if (node == nil) then 
-      do return haxe.ds.TreeNode.new(nil,k,v,nil) end;
-    end;
-    local c = self:compare(k,node.key);
-    if (c == 0) then 
-      do return haxe.ds.TreeNode.new(node.left,k,v,node.right,(function() 
-        local _hx_1
-        if (node == nil) then 
-        _hx_1 = 0; else 
-        _hx_1 = node._height; end
-        return _hx_1
-      end )()) end;
+  'get', function(self,key) 
+    do return self.h[key] end
+  end,
+  'exists', function(self,key) 
+    local o = self.h;
+    local field = key;
+    if (o.__fields__ ~= nil) then 
+      do return o.__fields__[field] ~= nil end;
     else
-      if (c < 0) then 
-        local nl = self:setLoop(k,v,node.left);
-        do return self:balance(nl,node.key,node.value,node.right) end;
-      else
-        local nr = self:setLoop(k,v,node.right);
-        do return self:balance(node.left,node.key,node.value,nr) end;
-      end;
-    end;
-  end,
-  'balance', function(self,l,k,v,r) 
-    local hl = (function() 
-      local _hx_1
-      if (l == nil) then 
-      _hx_1 = 0; else 
-      _hx_1 = l._height; end
-      return _hx_1
-    end )();
-    local hr = (function() 
-      local _hx_2
-      if (r == nil) then 
-      _hx_2 = 0; else 
-      _hx_2 = r._height; end
-      return _hx_2
-    end )();
-    if (hl > (hr + 2)) then 
-      local _this = l.left;
-      local _this1 = l.right;
-      if ((function() 
-        local _hx_3
-        if (_this == nil) then 
-        _hx_3 = 0; else 
-        _hx_3 = _this._height; end
-        return _hx_3
-      end )() >= (function() 
-        local _hx_4
-        if (_this1 == nil) then 
-        _hx_4 = 0; else 
-        _hx_4 = _this1._height; end
-        return _hx_4
-      end )()) then 
-        do return haxe.ds.TreeNode.new(l.left,l.key,l.value,haxe.ds.TreeNode.new(l.right,k,v,r)) end;
-      else
-        do return haxe.ds.TreeNode.new(haxe.ds.TreeNode.new(l.left,l.key,l.value,l.right.left),l.right.key,l.right.value,haxe.ds.TreeNode.new(l.right.right,k,v,r)) end;
-      end;
-    else
-      if (hr > (hl + 2)) then 
-        local _this2 = r.right;
-        local _this3 = r.left;
-        if ((function() 
-          local _hx_5
-          if (_this2 == nil) then 
-          _hx_5 = 0; else 
-          _hx_5 = _this2._height; end
-          return _hx_5
-        end )() > (function() 
-          local _hx_6
-          if (_this3 == nil) then 
-          _hx_6 = 0; else 
-          _hx_6 = _this3._height; end
-          return _hx_6
-        end )()) then 
-          do return haxe.ds.TreeNode.new(haxe.ds.TreeNode.new(l,k,v,r.left),r.key,r.value,r.right) end;
-        else
-          do return haxe.ds.TreeNode.new(haxe.ds.TreeNode.new(l,k,v,r.left.left),r.left.key,r.left.value,haxe.ds.TreeNode.new(r.left.right,r.key,r.value,r.right)) end;
-        end;
-      else
-        do return haxe.ds.TreeNode.new(l,k,v,r,(function() 
-          local _hx_7
-          if (hl > hr) then 
-          _hx_7 = hl; else 
-          _hx_7 = hr; end
-          return _hx_7
-        end )() + 1) end;
-      end;
-    end;
-  end,
-  'compare', function(self,k1,k2) 
-    do return Reflect.compare(k1,k2) end
-  end
-  ,'__class__',  haxe.ds.BalancedTree
-)
-
-haxe.ds.TreeNode.new = function(l,k,v,r,h) 
-  local self = _hx_new(haxe.ds.TreeNode.prototype)
-  haxe.ds.TreeNode.super(self,l,k,v,r,h)
-  return self
-end
-haxe.ds.TreeNode.super = function(self,l,k,v,r,h) 
-  if (h == nil) then 
-    h = -1;
-  end;
-  self.left = l;
-  self.key = k;
-  self.value = v;
-  self.right = r;
-  if (h == -1) then 
-    local tmp;
-    local _this = self.left;
-    local _this1 = self.right;
-    if ((function() 
-      local _hx_1
-      if (_this == nil) then 
-      _hx_1 = 0; else 
-      _hx_1 = _this._height; end
-      return _hx_1
-    end )() > (function() 
-      local _hx_2
-      if (_this1 == nil) then 
-      _hx_2 = 0; else 
-      _hx_2 = _this1._height; end
-      return _hx_2
-    end )()) then 
-      local _this2 = self.left;
-      if (_this2 == nil) then 
-        tmp = 0;
-      else
-        tmp = _this2._height;
-      end;
-    else
-      local _this3 = self.right;
-      if (_this3 == nil) then 
-        tmp = 0;
-      else
-        tmp = _this3._height;
-      end;
-    end;
-    self._height = tmp + 1;
-  else
-    self._height = h;
-  end;
-end
-haxe.ds.TreeNode.__name__ = true
-haxe.ds.TreeNode.prototype = _hx_a(
-  
-  '__class__',  haxe.ds.TreeNode
-)
-
-haxe.ds.EnumValueMap.new = function() 
-  local self = _hx_new(haxe.ds.EnumValueMap.prototype)
-  haxe.ds.EnumValueMap.super(self)
-  return self
-end
-haxe.ds.EnumValueMap.super = function(self) 
-  haxe.ds.BalancedTree.super(self);
-end
-haxe.ds.EnumValueMap.__name__ = true
-haxe.ds.EnumValueMap.__interfaces__ = {haxe.IMap}
-haxe.ds.EnumValueMap.prototype = _hx_a(
-  'compare', function(self,k1,k2) 
-    local d = k1[1] - k2[1];
-    if (d ~= 0) then 
-      do return d end;
-    end;
-    local p1 = k1:slice(2);
-    local p2 = k2:slice(2);
-    if ((p1.length == 0) and (p2.length == 0)) then 
-      do return 0 end;
-    end;
-    do return self:compareArgs(p1,p2) end
-  end,
-  'compareArgs', function(self,a1,a2) 
-    local ld = a1.length - a2.length;
-    if (ld ~= 0) then 
-      do return ld end;
-    end;
-    local _g1 = 0;
-    local _g = a1.length;
-    while (_g1 < _g) do 
-      _g1 = _g1 + 1;
-      local i = _g1 - 1;
-      local d = self:compareArg(a1[i],a2[i]);
-      if (d ~= 0) then 
-        do return d end;
-      end;
-      end;
-    do return 0 end
-  end,
-  'compareArg', function(self,v1,v2) 
-    if (Reflect.isEnumValue(v1) and Reflect.isEnumValue(v2)) then 
-      do return self:compare(v1,v2) end;
-    else
-      if (lua.Boot.__instanceof(v1,Array) and lua.Boot.__instanceof(v2,Array)) then 
-        do return self:compareArgs(v1,v2) end;
-      else
-        do return Reflect.compare(v1,v2) end;
-      end;
+      do return o[field] ~= nil end;
     end;
   end
-  ,'__class__',  haxe.ds.EnumValueMap
+  ,'__class__',  haxe.ds.IntMap
 )
-haxe.ds.EnumValueMap.__super__ = haxe.ds.BalancedTree
-setmetatable(haxe.ds.EnumValueMap.prototype,{__index=haxe.ds.BalancedTree.prototype})
 
 haxe.ds.StringMap.new = function() 
   local self = _hx_new(haxe.ds.StringMap.prototype)
@@ -1669,6 +1550,16 @@ end
 haxe.ds.StringMap.__name__ = true
 haxe.ds.StringMap.__interfaces__ = {haxe.IMap}
 haxe.ds.StringMap.prototype = _hx_a(
+  'set', function(self,key,value) 
+    self.v[key] = value;
+    self.k[key] = true;
+  end,
+  'get', function(self,key) 
+    do return self.v[key] end
+  end,
+  'exists', function(self,key) 
+    do return (self.k[key] or false) end
+  end,
   'keys', function(self) 
     local cur = _hx_tab_array({ }, 0);
     for _k,_v in pairs(self.k) do
@@ -2280,9 +2171,7 @@ haxe.EntryPoint.threadCount = 0
 lua.Boot.hiddenFields = {__id__=true, hx__closures=true, super=true, prototype=true, __fields__=true, __ifields__=true, __class__=true, __properties__=true}
 do
 
-App._httpServer = HttpServer.new();
-App._routes = haxe.ds.StringMap.new();
-App._errorHandlers = haxe.ds.EnumValueMap.new();
+Chocolate.App = Chocolate.new();
 if (lua.lib.lrexlib.Rex == nil) then 
   _G.error("Rex is missing.  Please install lrexlib-pcre.",0);
 end;
@@ -2290,9 +2179,7 @@ Fio._module = require("fio");
 String.prototype.__class__ = String;
 String.__name__ = true;
 Array.__name__ = true;
-App._httpServer = HttpServer.new();
-App._routes = haxe.ds.StringMap.new();
-App._errorHandlers = haxe.ds.EnumValueMap.new();
+Chocolate.App = Chocolate.new();
 if (lua.lib.lrexlib.Rex == nil) then 
   _G.error("Rex is missing.  Please install lrexlib-pcre.",0);
 end;
@@ -2300,6 +2187,20 @@ Fio._module = require("fio");
 String.prototype.__class__ = String;
 String.__name__ = true;
 Array.__name__ = true;
+end
+_hx_bind = function(o,m)
+  if m == nil then return nil end;
+  local f;
+  if o._hx__closures == nil then
+    _G.rawset(o, '_hx__closures', {});
+  else 
+    f = o._hx__closures[m];
+  end
+  if (f == nil) then
+    f = function(...) return m(o, ...) end;
+    o._hx__closures[m] = f;
+  end
+  return f;
 end
 _hx_funcToField = function(f)
   if type(f) == 'function' then 

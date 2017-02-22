@@ -58,7 +58,7 @@ class HttpRequest {
     private function ReadHeaders (channel : IRWChannel) : Void {
         var line = channel.ReadUntil ("\n").trim ();
         var parts = line.split (" ");        
-        if (parts.length != 3) throw "Bad request";
+        if (parts.length != 3) throw HttpStatus.BadRequest;
         Method = HttpMethod.createByName (parts[0].toLowerCase ());
         Resource = parts[1];
         trace ('$Method $Resource');        
@@ -68,7 +68,7 @@ class HttpRequest {
         line = channel.ReadUntil ("\n").trim ();
         while (line.length > 0) {
             var head = line.split (": ");
-            if (head.length < 2) throw "Bad request";
+            if (head.length < 2) throw HttpStatus.BadRequest;
             Headers[head[0]] = head[1];
             line = channel.ReadUntil ("\n").trim ();
         }
@@ -92,12 +92,8 @@ class HttpRequest {
     /**
         Constructor
     **/
-    public function new (channel : IRWChannel) {        
-        try {
-            ReadHeaders (channel);
-            ReadBody (channel);
-        } catch (e : Dynamic) {
-            throw "Bad request";
-        }
+    public function new (channel : IRWChannel) {                
+        ReadHeaders (channel);
+        ReadBody (channel);
     }
 }

@@ -22,7 +22,7 @@
 /**
  *  Process http request
  */
-class HttpHandler implements IHandler {
+class HttpHandler extends Handler {
     /**
      *  On request callback
      */
@@ -40,11 +40,10 @@ class HttpHandler implements IHandler {
      *  Process request
      *  @param context - Http context
      */
-    public function Process (context : HttpContext) : Bool {
+    public override function Process (context : HttpContext) : Void {
         if (_onRequest != null) {
             _onRequest (context);
             context.Response.Close ();
         }
-        return true;
     }
 }

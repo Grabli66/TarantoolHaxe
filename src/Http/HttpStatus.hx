@@ -20,51 +20,38 @@
 */
 
 /**
- *  Handle errors
+ *  Http status for response
  */
-class ErrorHandler extends Handler {
+ @:enum
+abstract HttpStatus(Int) {
     /**
-     *  Callback to process error
+     *  Normal response
      */
-    private var _onError : HttpContext -> HttpStatus -> Void;
-
-    /**
-     *  Process error
-     */
-    private function ProcessError (c : HttpContext, err : HttpStatus) {
-        c.Response.Reset ();
-        c.Response.Status = err;
-
-        if (_onError != null) {
-            try {                
-                _onError (c, err);
-            } catch (e : Dynamic) {
-                c.Response.Reset ();
-                c.Response.Status = HttpStatus.Internal;
-            }
-        }            
-
-        c.Response.Close ();
-    }
+    var Ok = 200;
 
     /**
-     *  Constructor
+     *  Server internal error
      */
-    public function new (call : HttpContext -> HttpStatus -> Void) {
-        _onError = call;
-    }    
+    var Internal = 500;
 
     /**
-     *  Process request
-     *  @param context - Http context
+     *  Bad request
      */
-    public override function Process (context : HttpContext) : Void {
-        try {
-            CallNext (context);
-        } catch (e : HttpStatus) {
-            ProcessError (context, e);
-        } catch (e : Dynamic) {
-            ProcessError (context, HttpStatus.Internal);
+     var BadRequest = 400;
+
+    /**
+     *  Resource not found
+     */
+    var NotFound = 404;
+
+    public function GetDescription () : String {
+        switch (this) {
+            case Ok: return "OK";
+            case Internal: return "Internal error";
+            case BadRequest: return "Bad request";
+            case NotFound: return "Not found";
         }
+
+        return "Unknown";
     }
 }

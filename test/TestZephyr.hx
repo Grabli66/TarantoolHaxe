@@ -1,7 +1,8 @@
+import Chocolate.App;
 import HtmlBuilder.*;
 
 class TestZephyr {
-    static function main () {                        
+    static function main () {
         App.Get ("/", function (req : Request) {
             return html ([
                     head (),
@@ -14,8 +15,13 @@ class TestZephyr {
                 ]);
         });
 
-        App.OnError (HttpError.NotFound, function (req : Request) {
-            return "";
+        App.OnError (HttpStatus.NotFound, function (req : Request) {
+            return html ([
+                    head (),
+                    body ([
+                        h1 ({ text : "Not found!" })
+                    ])
+                ]);
         });
 
         /*App.WebSocket.OnConnect ();
@@ -25,7 +31,7 @@ class TestZephyr {
 
         App.Listen ({
             Port : 8081,
-            StaticDir : "./out/media"
+            StaticDir : "./out/media"            
         });
     }
 }

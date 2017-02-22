@@ -22,11 +22,27 @@
 /**
  *  Handler for request
  */
-interface IHandler {
+class Handler {
     /**
-     *  Process request
+     *  Next handler
+     */
+    public var Next : Handler;
+
+    /**
+     *  Process request, for override
      *  @param context - 
      *  @return Bool
      */
-    public function Process (context : HttpContext) : Bool;
+    public function Process (context : HttpContext) : Void {}
+
+    /**
+     *  Call next handler
+     */
+    public function CallNext (context : HttpContext) {
+        if (Next != null) {
+            Next.Process (context);
+        } else {
+            // Not found
+        }
+    }
 }

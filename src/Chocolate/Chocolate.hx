@@ -23,29 +23,61 @@
  *  Chocolate app
  */
 @:final
-class App {
+class Chocolate {    
     /**
      *  Http server
      */
-    private static var _httpServer : HttpServer;    
+    private var _httpServer : HttpServer;    
 
     /**
      *  Routes 
      */
-    private static var _routes : Map<String, Route>;
+    private var _routes : Map<String, Route>;
 
     /**
      *  On error callback
      */
-    private static var _errorHandlers : Map<HttpError, RequestCall>;
+    private var _errorHandlers : Map<HttpStatus, RequestCall>;
+
+    /**
+     *  App instance
+     */
+    public static var App (default, null) : Chocolate;
+
+    /**
+     *  Web socket instance
+     */
+    public var WebSocket : WebSocket;
 
     /**
      *  On init class
      */
     private static function __init__ () : Void {
+        App = new Chocolate ();
+    }
+
+    /**
+     *  Constructor
+     */
+    private function new () {
         _httpServer = new HttpServer ();
         _routes = new Map<String, Route> ();
-        _errorHandlers = new Map<HttpError, RequestCall> ();
+        _errorHandlers = new Map<HttpStatus, RequestCall> ();
+        this.WebSocket = new WebSocket ();
+    }
+
+    /**
+     *  On http error
+     *  @param c - http context
+     *  @param error - http status
+     */
+    private function OnHttpError (c : HttpContext, error : HttpStatus) : Void {
+        if (_errorHandlers.exists (error)) {
+            var call = _errorHandlers.get (error);
+            var req = new Request (c.Request);
+            var resp = call (req);
+            WriteResponse (c, resp);
+        }
     }
     
     /**
@@ -53,14 +85,14 @@ class App {
      *  @param c - Http context for write
      *  @param response - response from server
      */
-    private static function WriteResponse (c : HttpContext, response : Response) {
+    private function WriteResponse (c : HttpContext, response : Response) {
         c.Response.WriteString (response.ToString ());
     }
 
     /**
      *  Process http request
      */
-    private static function OnHttpRequest (c : HttpContext) : Void {
+    private function OnHttpRequest (c : HttpContext) : Void {
         try {
             for (kv in _routes) {
                 if (kv.IsMatch (c.Request.Resource)) {
@@ -80,7 +112,7 @@ class App {
      *  @param pattern - path to handle. Example: /mypage/id/1
      *  @param call - callback to handle request
      */
-    public static function Get (pattern : String, call : RequestCall) : Void {
+    public function Get (pattern : String, call : RequestCall) : Void {
         _routes[pattern] = new Route (pattern, call);
     }
 
@@ -89,7 +121,7 @@ class App {
      *  @param pattern - path to handle. Example: /mypage/id/1
      *  @param call - callback to handle request
      */
-    public static function Post (pattern : String, call : RequestCall) : Void {
+    public function Post (pattern : String, call : RequestCall) : Void {
         _routes[pattern] = new Route (pattern, call);
     }
 
@@ -98,7 +130,7 @@ class App {
      *  @param err - error type
      *  @param call - callback to process error
      */
-    public static function OnError (err : HttpError, call : RequestCall) : Void {
+    public function OnError (err : HttpStatus, call : RequestCall) : Void {
         _errorHandlers[err] = call;
     }
 
@@ -106,8 +138,10 @@ class App {
      *  Start listen
      *  @param options - various options like port to listen
      */
-    public static function Listen (options : AppOptions) {
+    public function Listen (options : AppOptions) {
         var httpHandler = new HttpHandler (OnHttpRequest);
+        var errorHandler = new ErrorHandler (OnHttpError);
+        _httpServer.AddHandler (errorHandler);
 
         if (options.StaticDir != null) {
             var staticHandler = new StaticHandler ();
