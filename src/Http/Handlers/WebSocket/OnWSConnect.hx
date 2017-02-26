@@ -20,21 +20,6 @@
 */
 
 /**
- *  Options for Chocolate app
+ *  Callback for websocket connect
  */
-typedef AppOptions = {
-    /**
-     *  Port to listen
-     */
-    Port : Int,
-
-    /**
-     *  Dir for static content
-     */
-    ?StaticDir : String,
-
-    /**
-     *  Can handle websockets
-     */
-    ?HandleWebSocket : Bool
-}
+typedef OnWSConnect = Peer -> IWriteChannel -> Void;

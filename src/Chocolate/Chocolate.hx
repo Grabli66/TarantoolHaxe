@@ -47,7 +47,7 @@ class Chocolate {
     /**
      *  Web socket instance
      */
-    public var WebSocket : WebSocket;
+    public var WebSocket (default, null) : WebSocket;
 
     /**
      *  On init class
@@ -143,13 +143,18 @@ class Chocolate {
         var errorHandler = new ErrorHandler (OnHttpError);
         _httpServer.AddHandler (errorHandler);
 
+        if (options.HandleWebSocket != null) {
+            var wshandler = new WebSocketHandler (WebSocket.Handler);
+            _httpServer.AddHandler (wshandler);
+        }
+
         if (options.StaticDir != null) {
             var staticHandler = new StaticHandler ();
             staticHandler.AddPath (options.StaticDir);
             _httpServer.AddHandler (staticHandler);
         }
         
-        _httpServer.AddHandler (httpHandler);        
+        _httpServer.AddHandler (httpHandler);
         _httpServer.Bind ("*", options.Port);
     }
 }

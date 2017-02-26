@@ -11,9 +11,9 @@ class HttpResponse implements IWriteChannel {
     private var _buffer : BytesBuffer;
 
     /**
-        Channel
-    **/
-    private var _channel : IRWChannel;
+     *  Raw channel for write/read data
+     */
+    public var Channel (default, null) : IRWChannel;
 
     /**
         Response headers
@@ -23,13 +23,13 @@ class HttpResponse implements IWriteChannel {
     /**
      *  Response status
      */
-    public var Status : HttpStatus = HttpStatus.Ok;
+    public var Status : HttpStatus = HttpStatus.Ok;    
 
     /**
         Constructor
     **/
     public function new (channel : IRWChannel) {
-        _channel = channel;
+        Channel = channel;
         Reset ();
     }
 
@@ -61,9 +61,9 @@ class HttpResponse implements IWriteChannel {
     **/
     public function Close () : Void {
         var descr = Status.GetDescription ();
-        _channel.WriteString ('HTTP/1.1 ${Status} ${descr}\n');
-        _channel.WriteString ('Content-Length: ${_buffer.length}');
-        _channel.WriteString ("\n\n");
-        _channel.Write (_buffer.getBytes ());
+        Channel.WriteString ('HTTP/1.1 ${Status} ${descr}\n');
+        Channel.WriteString ('Content-Length: ${_buffer.length}');
+        Channel.WriteString ("\n\n");
+        Channel.Write (_buffer.getBytes ());
     }
 }

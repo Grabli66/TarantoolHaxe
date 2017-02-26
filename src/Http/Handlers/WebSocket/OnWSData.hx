@@ -19,22 +19,9 @@
  * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+import haxe.io.Bytes;
+
 /**
- *  Options for Chocolate app
+ *  Callback for websocket data
  */
-typedef AppOptions = {
-    /**
-     *  Port to listen
-     */
-    Port : Int,
-
-    /**
-     *  Dir for static content
-     */
-    ?StaticDir : String,
-
-    /**
-     *  Can handle websockets
-     */
-    ?HandleWebSocket : Bool
-}
+typedef OnWSData = Peer -> Bytes -> IWriteChannel -> Void;

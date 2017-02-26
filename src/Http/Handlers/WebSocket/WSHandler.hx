@@ -20,21 +20,11 @@
 */
 
 /**
- *  Options for Chocolate app
+ *  Handler for websocket callbacks
  */
-typedef AppOptions = {
-    /**
-     *  Port to listen
-     */
-    Port : Int,
-
-    /**
-     *  Dir for static content
-     */
-    ?StaticDir : String,
-
-    /**
-     *  Can handle websockets
-     */
-    ?HandleWebSocket : Bool
+typedef WSHandler = {
+    OnConnect : OnWSConnect,
+    OnData : OnWSData,
+    ?OnClose : OnWSClose,
+    ?OnError : OnWSError
 }

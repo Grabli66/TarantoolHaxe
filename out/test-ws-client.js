@@ -24,12 +24,11 @@ Std.string = function(s) {
 var TestWsClient = function() { };
 TestWsClient.__name__ = true;
 TestWsClient.main = function() {
-	var ws = new WebSocket("ws://localhost:3301");
+	var ws = new WebSocket("ws://localhost:8081");
 	ws.binaryType = "arraybuffer";
 	ws.onopen = function(s) {
 		console.log("OPEN");
 		var buff = haxe_io_Bytes.ofString("123");
-		ws.send(buff.b.bufferValue);
 	};
 	ws.onclose = function(s1) {
 		console.log("CLOSE");

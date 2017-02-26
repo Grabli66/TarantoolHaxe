@@ -94,27 +94,22 @@ class InternalHandler implements IWriteChannel {
     /**
         On connect callback
     **/
-    public var OnConnect : Peer -> IWriteChannel -> Void;
+    public var OnConnect : OnWSConnect;
 
     /**
         On normal web socket close
     **/
-    public var OnClose : Peer -> Void;
-
-    /**
-        On disconnect
-    **/
-    public var OnDisconnect : Peer -> Void;
+    public var OnClose : OnWSClose;
 
     /**
         On data callback
     **/
-    public var OnData : Peer -> IWriteChannel -> Bytes -> Void;
+    public var OnData : OnWSData;
 
     /**
         On error callback
     **/
-    public var OnError : Peer -> Dynamic -> Void;
+    public var OnError : OnWSError;
 
     /**
         Decode hex string to Bytes
@@ -135,26 +130,18 @@ class InternalHandler implements IWriteChannel {
         Process handshake from client
     **/
     private function ProcessHandshake () : Void {
-        var s = _channel.ReadUntil ("\r\n").rtrim();
-        var head = s.split (": ");
-        if (head.length == 2) {
-            _headers[head[0]] = head[1];
-        }
-
-        if (s.length == 0) {
-            var key = _headers[SecWebSocketKey] + WS_GUID;
-            var sha = Sha1.encode (key);
-            var shaKey = Base64.encode (decode (sha));
-            var stringBuffer = new StringBuf ();
-            stringBuffer.add ("HTTP/1.1 101 Switching Protocols\r\n");
-            stringBuffer.add ("Upgrade: websocket\r\n");
-            stringBuffer.add ("Connection: Upgrade\r\n");
-            stringBuffer.add ('Sec-WebSocket-Accept: ${shaKey}\r\n');
-            stringBuffer.add ("\r\n");
-            _channel.WriteString (stringBuffer.toString ());
-            _state = WorkState.FRAME_TYPE;
-             OnConnect (_peer, this);
-        }                
+        var key = _headers[SecWebSocketKey] + WS_GUID;
+        var sha = Sha1.encode (key);
+        var shaKey = Base64.encode (decode (sha));
+        var stringBuffer = new StringBuf ();
+        stringBuffer.add ("HTTP/1.1 101 Switching Protocols\r\n");
+        stringBuffer.add ("Upgrade: websocket\r\n");
+        stringBuffer.add ("Connection: Upgrade\r\n");
+        stringBuffer.add ('Sec-WebSocket-Accept: ${shaKey}\r\n');
+        stringBuffer.add ("\r\n");
+        _channel.WriteString (stringBuffer.toString ());
+        _state = WorkState.FRAME_TYPE;
+        OnConnect (_peer, this);
     }
 
     /**
@@ -222,10 +209,10 @@ class InternalHandler implements IWriteChannel {
                     var b = data.get (i);
                     var d = b ^ mask.get (j);
                     res.set (i, d);
-                }                
+                }
 
                 // On data
-                OnData (_peer, this, res);
+                OnData (_peer, res, this);
             }
         }      
         
@@ -244,12 +231,12 @@ class InternalHandler implements IWriteChannel {
     }
 
     /**
-        Constructor
-    **/
-    public function new (peer : Peer, channel : IRWChannel) {        
-        _peer = peer;
-        _channel = channel;
-        _headers = new Map<String, String> ();
+     *  Constructor
+     *  @param context - http context
+     */
+    public function new (context : HttpContext) {
+        _channel = context.Response.Channel;
+        _headers = context.Request.Headers;
         _state = WorkState.HANDSHAKE;
     }
 
@@ -258,11 +245,11 @@ class InternalHandler implements IWriteChannel {
     **/
     public function Start () : Void {
         try {
-            while (true) {                
+            while (true) {
                 switch (_state) {
                     case WorkState.HANDSHAKE: ProcessHandshake ();
                     case WorkState.FRAME_TYPE: ProcessFrame ();
-                    case WorkState.LENGTH: ProcessLength ();                    
+                    case WorkState.LENGTH: ProcessLength ();
                     case WorkState.DATA: ProcessData ();
                 }
             }

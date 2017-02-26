@@ -19,13 +19,42 @@
  * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+import haxe.io.Bytes;
+
 /**
  *  Web socket
  */
 class WebSocket {
     /**
+     *  Callbacks
+     */
+    public var Handler : WSHandler = null;
+
+    /**
      *  Constructor
      */
     public function new () {
+        Handler = {
+            OnConnect : function (p : Peer, c : IWriteChannel) {
+            },
+            OnData : function (p : Peer, data : Bytes, c : IWriteChannel) {
+            }
+        };
+    }
+
+    public function OnConnect (call : OnWSConnect) {
+        Handler.OnConnect = call;
+    }
+
+    public function OnData (call : OnWSData) {
+        Handler.OnData = call;
+    }
+
+    public function OnClose (call : OnWSClose) {
+        Handler.OnClose = call;
+    }
+
+    public function OnError (call : OnWSError) {
+        Handler.OnError = call;
     }
 }

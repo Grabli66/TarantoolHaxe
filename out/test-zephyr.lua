@@ -76,6 +76,8 @@ local HttpRequest = _hx_e()
 local HttpResponse = _hx_e()
 local _HttpStatus = {}
 _HttpStatus.HttpStatus_Impl_ = _hx_e()
+local WorkState = _hx_e()
+local InternalHandler = _hx_e()
 local JsonResponse = _hx_e()
 local Math = _hx_e()
 local Peer = _hx_e()
@@ -97,6 +99,7 @@ local TagInternal = _hx_e()
 local TestZephyr = _hx_e()
 local TextTag = _hx_e()
 local Type = _hx_e()
+local WebSocketHandler = _hx_e()
 local haxe = {}
 haxe.StackItem = _hx_e()
 haxe.IMap = _hx_e()
@@ -107,11 +110,15 @@ haxe.EntryPoint = _hx_e()
 haxe.Log = _hx_e()
 haxe.MainEvent = _hx_e()
 haxe.MainLoop = _hx_e()
+haxe.io = {}
+haxe.io.Bytes = _hx_e()
+haxe.crypto = {}
+haxe.crypto.Base64 = _hx_e()
+haxe.crypto.BaseCode = _hx_e()
+haxe.crypto.Sha1 = _hx_e()
 haxe.ds = {}
 haxe.ds.IntMap = _hx_e()
 haxe.ds.StringMap = _hx_e()
-haxe.io = {}
-haxe.io.Bytes = _hx_e()
 haxe.io.BytesBuffer = _hx_e()
 haxe.io.Eof = _hx_e()
 haxe.io.Error = _hx_e()
@@ -185,6 +192,30 @@ Array.prototype = _hx_a(
       end;
     local tmp = self;
     tmp.length = tmp.length - 1;
+    do return ret end
+  end,
+  'slice', function(self,pos,_end) 
+    if ((_end == nil) or (_end > self.length)) then 
+      _end = self.length;
+    else
+      if (_end < 0) then 
+        _end = _G.math.fmod((self.length - (_G.math.fmod(-_end, self.length))), self.length);
+      end;
+    end;
+    if (pos < 0) then 
+      pos = _G.math.fmod((self.length - (_G.math.fmod(-pos, self.length))), self.length);
+    end;
+    if ((pos > _end) or (pos > self.length)) then 
+      do return _hx_tab_array({ }, 0) end;
+    end;
+    local ret = _hx_tab_array({ }, 0);
+    local _g1 = pos;
+    local _g = _end;
+    while (_g1 < _g) do 
+      _g1 = _g1 + 1;
+      local i = _g1 - 1;
+      ret:push(self[i]);
+      end;
     do return ret end
   end,
   'unshift', function(self,x) 
@@ -359,11 +390,20 @@ WebSocket.new = function()
   return self
 end
 WebSocket.super = function(self) 
+  self.Handler = nil;
+  self.Handler = _hx_o({__fields__={OnConnect=true,OnData=true},OnConnect=function(p,c) 
+  end,OnData=function(p1,data,c1) 
+  end});
 end
 WebSocket.__name__ = true
 WebSocket.prototype = _hx_a(
-  
-  '__class__',  WebSocket
+  'OnConnect', function(self,call) 
+    self.Handler.OnConnect = call;
+  end,
+  'OnData', function(self,call) 
+    self.Handler.OnData = call;
+  end
+  ,'__class__',  WebSocket
 )
 
 Chocolate.new = function() 
@@ -408,7 +448,7 @@ Chocolate.prototype = _hx_a(
      if not _hx_status then 
       local _hx_1 = _hx_result
       local e = _hx_1
-      haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="Chocolate.hx",lineNumber=103,className="Chocolate",methodName="OnHttpRequest"}));
+      haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="Chocolate.hx",lineNumber=106,className="Chocolate",methodName="OnHttpRequest"}));
      elseif _hx_result ~= _hx_expected_result then return _hx_result end;
   end,
   'Get', function(self,pattern,call) 
@@ -425,6 +465,10 @@ Chocolate.prototype = _hx_a(
     local httpHandler = HttpHandler.new(_hx_bind(self,self.OnHttpRequest));
     local errorHandler = ErrorHandler.new(_hx_bind(self,self.OnHttpError));
     self._httpServer:AddHandler(errorHandler);
+    if (options.HandleWebSocket ~= nil) then 
+      local wshandler = WebSocketHandler.new(self.WebSocket.Handler);
+      self._httpServer:AddHandler(wshandler);
+    end;
     if (options.StaticDir ~= nil) then 
       local staticHandler = StaticHandler.new();
       staticHandler:AddPath(options.StaticDir);
@@ -708,7 +752,7 @@ HttpResponse.new = function(channel)
 end
 HttpResponse.super = function(self,channel) 
   self.Status = 200;
-  self._channel = channel;
+  self.Channel = channel;
   self:Reset();
 end
 HttpResponse.__name__ = true
@@ -750,10 +794,10 @@ HttpResponse.prototype = _hx_a(
   end,
   'Close', function(self) 
     local descr = _HttpStatus.HttpStatus_Impl_.GetDescription(self.Status);
-    self._channel:WriteString("HTTP/1.1 " .. self.Status .. " " .. descr .. "\n");
-    self._channel:WriteString("Content-Length: " .. self._buffer.b.length);
-    self._channel:WriteString("\n\n");
-    self._channel:Write(self._buffer:getBytes());
+    self.Channel:WriteString("HTTP/1.1 " .. self.Status .. " " .. descr .. "\n");
+    self.Channel:WriteString("Content-Length: " .. self._buffer.b.length);
+    self.Channel:WriteString("\n\n");
+    self.Channel:Write(self._buffer:getBytes());
   end
   ,'__class__',  HttpResponse
 )
@@ -772,6 +816,181 @@ _HttpStatus.HttpStatus_Impl_.GetDescription = function(this1)
     do return "Internal error" end; end;
   do return "Unknown" end;
 end
+_hxClasses["WorkState"] = { __ename__ = true, __constructs__ = _hx_tab_array({[0]="HANDSHAKE","FRAME_TYPE","LENGTH","DATA"},4)}
+WorkState = _hxClasses["WorkState"];
+WorkState.HANDSHAKE = _hx_tab_array({[0]="HANDSHAKE",0,__enum__ = WorkState},2)
+
+WorkState.FRAME_TYPE = _hx_tab_array({[0]="FRAME_TYPE",1,__enum__ = WorkState},2)
+
+WorkState.LENGTH = _hx_tab_array({[0]="LENGTH",2,__enum__ = WorkState},2)
+
+WorkState.DATA = _hx_tab_array({[0]="DATA",3,__enum__ = WorkState},2)
+
+
+InternalHandler.new = function(context) 
+  local self = _hx_new(InternalHandler.prototype)
+  InternalHandler.super(self,context)
+  return self
+end
+InternalHandler.super = function(self,context) 
+  self._channel = context.Response.Channel;
+  self._headers = context.Request.Headers;
+  self._state = WorkState.HANDSHAKE;
+end
+InternalHandler.__name__ = true
+InternalHandler.__interfaces__ = {IWriteChannel}
+InternalHandler.prototype = _hx_a(
+  'decode', function(self,str) 
+    local base = haxe.io.Bytes.ofString("0123456789abcdef");
+    do return haxe.crypto.BaseCode.new(base):decodeBytes(haxe.io.Bytes.ofString(str:toLowerCase())) end
+  end,
+  'PushError', function(self,e) 
+    if (self.OnError ~= nil) then 
+      self:OnError(self._peer,e);
+    end;
+  end,
+  'ProcessHandshake', function(self) 
+    local this1 = self._headers;
+    local key = this1.v["Sec-WebSocket-Key"] .. "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+    local sha = haxe.crypto.Sha1.encode(key);
+    local shaKey = haxe.crypto.Base64.encode(self:decode(sha));
+    local stringBuffer_length;
+    local stringBuffer_b = _hx_e();
+    stringBuffer_length = 0;
+    local str = "HTTP/1.1 101 Switching Protocols\r\n";
+    _G.table.insert(stringBuffer_b,str);
+    stringBuffer_length = stringBuffer_length + str.length;
+    local str1 = "Upgrade: websocket\r\n";
+    _G.table.insert(stringBuffer_b,str1);
+    stringBuffer_length = stringBuffer_length + str1.length;
+    local str2 = "Connection: Upgrade\r\n";
+    _G.table.insert(stringBuffer_b,str2);
+    stringBuffer_length = stringBuffer_length + str2.length;
+    local str3 = Std.string("Sec-WebSocket-Accept: " .. shaKey .. "\r\n");
+    _G.table.insert(stringBuffer_b,str3);
+    stringBuffer_length = stringBuffer_length + str3.length;
+    local str4 = "\r\n";
+    _G.table.insert(stringBuffer_b,str4);
+    stringBuffer_length = stringBuffer_length + str4.length;
+    self._channel:WriteString(_G.table.concat(stringBuffer_b));
+    self._state = WorkState.FRAME_TYPE;
+    self:OnConnect(self._peer,self);
+  end,
+  'ProcessFrame', function(self) 
+    local binaryData = self._channel:Read(2);
+    local frame = binaryData.b[0];
+    if ((_hx_bit.band(frame,8)) > 0) then 
+      self._frameType = 8;
+    else
+      if ((_hx_bit.band(frame,2)) > 0) then 
+        self._frameType = 2;
+      else
+        _G.error("Only binary frame allowed",0);
+      end;
+    end;
+    local len = binaryData.b[1];
+    self._packLen = 0;
+    if ((_hx_bit.band(len,128)) < 1) then 
+      _G.error("Only masked message allowed",0);
+    end;
+    local tmp = self;
+    tmp._packLen = tmp._packLen + (_hx_bit.bxor(len,128));
+    if (self._packLen > 125) then 
+      self._state = WorkState.LENGTH;
+    else
+      self._state = WorkState.DATA;
+    end;
+  end,
+  'ProcessLength', function(self) 
+    if (self._packLen == 126) then 
+      local binaryData = self._channel:Read(2);
+      local tmp = self;
+      tmp._packLen = tmp._packLen + binaryData.b[0];
+    else
+      if (self._packLen ~= 127) then 
+        _G.error("Wrong length type",0);
+      end;
+    end;
+    self._state = WorkState.DATA;
+  end,
+  'ProcessData', function(self) 
+    local binaryData = self._channel:Read(self._packLen + 4);
+    local _g = self._frameType;
+    local _g1 = _g;
+    if (_g1) == 2 then 
+      local mask = binaryData:sub(0,4);
+      local data = binaryData:sub(4,binaryData.length - 4);
+      local res = haxe.io.Bytes.alloc(data.length);
+      local _g11 = 0;
+      local _g2 = data.length;
+      while (_g11 < _g2) do 
+        _g11 = _g11 + 1;
+        local i = _g11 - 1;
+        local j = _G.math.fmod(i, 4);
+        local b = data.b[i];
+        local d = _hx_bit.bxor(b,mask.b[j]);
+        res.b[i] = _hx_bit.band(d,255);
+        end;
+      self:OnData(self._peer,res,self);
+    elseif (_g1) == 8 then  end;
+    self._state = WorkState.FRAME_TYPE;
+  end,
+  'Disconnect', function(self) 
+    local _hx_expected_result = {}
+    local _hx_status, _hx_result = pcall(function() 
+    
+        self._channel:Close();
+       return _hx_expected_result end)
+     if not _hx_status then 
+      local _hx_1 = _hx_result
+      local e = _hx_1
+      haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="InternalHandler.hx",lineNumber=229,className="InternalHandler",methodName="Disconnect"}));
+     elseif _hx_result ~= _hx_expected_result then return _hx_result end;
+  end,
+  'Start', function(self) 
+    local _hx_expected_result = {}
+    local _hx_status, _hx_result = pcall(function() 
+    
+        while (true) do 
+          local _g = self._state;
+          local _g1 = _g[1];
+          if (_g1) == 0 then 
+            self:ProcessHandshake();
+          elseif (_g1) == 1 then 
+            self:ProcessFrame();
+          elseif (_g1) == 2 then 
+            self:ProcessLength();
+          elseif (_g1) == 3 then 
+            self:ProcessData(); end;
+          end;
+       return _hx_expected_result end)
+     if not _hx_status then 
+      local _hx_1 = _hx_result
+      local e = _hx_1
+      self:PushError(e);
+      self:Disconnect();
+     elseif _hx_result ~= _hx_expected_result then return _hx_result end;
+  end,
+  'Write', function(self,data) 
+    local frame = haxe.io.Bytes.alloc(2 + data.length);
+    frame.b[0] = 130;
+    frame.b[1] = _hx_bit.band(data.length,255);
+    frame:blit(2,data,0,data.length);
+    do return self._channel:Write(frame) end
+  end,
+  'WriteString', function(self,data) 
+    local frame = haxe.io.Bytes.alloc(2 + data.length);
+    frame.b[0] = 129;
+    frame.b[1] = _hx_bit.band(data.length,255);
+    local dat = haxe.io.Bytes.ofString(data);
+    frame:blit(2,dat,0,dat.length);
+    do return self._channel:Write(frame) end
+  end,
+  'Close', function(self) 
+    self._channel:Close();
+  end
+  ,'__class__',  InternalHandler
+)
 
 JsonResponse.new = {}
 JsonResponse.__name__ = true
@@ -1043,6 +1262,9 @@ Std.__name__ = true
 Std.string = function(s) 
   do return lua.Boot.__string_rec(s) end;
 end
+Std.int = function(x) 
+  do return _hx_bit_clamp(x) end;
+end
 Std.parseInt = function(x) 
   if (x == nil) then 
     do return nil end;
@@ -1133,6 +1355,23 @@ StringTools.trim = function(s)
 end
 StringTools.replace = function(s,sub,by) 
   do return s:split(sub):join(by) end;
+end
+StringTools.hex = function(n,digits) 
+  local s = "";
+  local hexChars = "0123456789ABCDEF";
+  while (true) do 
+    s = hexChars:charAt(_hx_bit.band(n,15)) .. s;
+    n = _hx_bit.rshift(n,4);
+    if (not (n > 0)) then 
+      break;
+    end;
+    end;
+  if (digits ~= nil) then 
+    while (s.length < digits) do 
+      s = "0" .. s;
+      end;
+  end;
+  do return s end;
 end
 
 Sys.new = {}
@@ -1243,6 +1482,12 @@ TestZephyr.main = function()
   Chocolate.App:OnError(404,function(req1) 
     do return _Tag.Tag_Impl_.ToResponse(HtmlBuilder.html(nil,_hx_tab_array({[0]=HtmlBuilder.head(), HtmlBuilder.body(nil,_hx_tab_array({[0]=HtmlBuilder.h1(_hx_o({__fields__={text=true},text="Not found!"})) }, 1)) }, 2))) end;
   end);
+  Chocolate.App.WebSocket:OnConnect(function(p,c) 
+    haxe.Log.trace("CONNECTED",_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="TestZephyr.hx",lineNumber=29,className="TestZephyr",methodName="main"}));
+  end);
+  Chocolate.App.WebSocket:OnData(function(p1,data,c1) 
+    haxe.Log.trace("DATA",_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="TestZephyr.hx",lineNumber=32,className="TestZephyr",methodName="main"}));
+  end);
   Chocolate.App:Listen(_hx_o({__fields__={Port=true,StaticDir=true},Port=8081,StaticDir="./out/media"}));
 end
 
@@ -1319,6 +1564,33 @@ Type.createEnum = function(e,constr,params)
   end;
   do return f end;
 end
+
+WebSocketHandler.new = function(handler) 
+  local self = _hx_new(WebSocketHandler.prototype)
+  WebSocketHandler.super(self,handler)
+  return self
+end
+WebSocketHandler.super = function(self,handler) 
+  self._handler = handler;
+end
+WebSocketHandler.__name__ = true
+WebSocketHandler.prototype = _hx_a(
+  'Process', function(self,context) 
+    local this1 = context.Request.Headers;
+    if (not (this1.k["Upgrade"] or false)) then 
+      do return end;
+    end;
+    local ih = InternalHandler.new(context);
+    ih.OnConnect = self._handler.OnConnect;
+    ih.OnData = self._handler.OnData;
+    ih.OnClose = self._handler.OnClose;
+    ih.OnError = self._handler.OnError;
+    ih:Start();
+  end
+  ,'__class__',  WebSocketHandler
+)
+WebSocketHandler.__super__ = Handler
+setmetatable(WebSocketHandler.prototype,{__index=Handler.prototype})
 _hxClasses["haxe.StackItem"] = { __ename__ = true, __constructs__ = _hx_tab_array({[0]="CFunction","Module","FilePos","Method","LocalFunction"},5)}
 haxe.StackItem = _hxClasses["haxe.StackItem"];
 haxe.StackItem.CFunction = _hx_tab_array({[0]="CFunction",0,__enum__ = haxe.StackItem},2)
@@ -1509,6 +1781,344 @@ haxe.MainLoop.tick = function()
   do return wait end;
 end
 
+haxe.io.Bytes.new = function(length,b) 
+  local self = _hx_new(haxe.io.Bytes.prototype)
+  haxe.io.Bytes.super(self,length,b)
+  return self
+end
+haxe.io.Bytes.super = function(self,length,b) 
+  self.length = length;
+  self.b = b;
+end
+haxe.io.Bytes.__name__ = true
+haxe.io.Bytes.alloc = function(length) 
+  local a = Array.new();
+  local _g1 = 0;
+  local _g = length;
+  while (_g1 < _g) do 
+    _g1 = _g1 + 1;
+    local i = _g1 - 1;
+    a:push(0);
+    end;
+  do return haxe.io.Bytes.new(length,a) end;
+end
+haxe.io.Bytes.ofString = function(s) 
+  local _g = _hx_tab_array({ }, 0);
+  local _g2 = 0;
+  local _g1 = s.length;
+  while (_g2 < _g1) do 
+    _g2 = _g2 + 1;
+    local c = _g2 - 1;
+    _g:push(_G.string.byte(s,c + 1));
+    end;
+  local bytes = _g;
+  do return haxe.io.Bytes.new(bytes.length,bytes) end;
+end
+haxe.io.Bytes.prototype = _hx_a(
+  'blit', function(self,pos,src,srcpos,len) 
+    if (((((pos < 0) or (srcpos < 0)) or (len < 0)) or ((pos + len) > self.length)) or ((srcpos + len) > src.length)) then 
+      _G.error(haxe.io.Error.OutsideBounds,0);
+    end;
+    local b1 = self.b;
+    local b2 = src.b;
+    if ((b1 == b2) and (pos > srcpos)) then 
+      local i = len;
+      while (i > 0) do 
+        i = i - 1;
+        b1[i + pos] = b2[i + srcpos];
+        end;
+      do return end;
+    end;
+    local _g1 = 0;
+    local _g = len;
+    while (_g1 < _g) do 
+      _g1 = _g1 + 1;
+      local i1 = _g1 - 1;
+      b1[i1 + pos] = b2[i1 + srcpos];
+      end;
+  end,
+  'sub', function(self,pos,len) 
+    if (((pos < 0) or (len < 0)) or ((pos + len) > self.length)) then 
+      _G.error(haxe.io.Error.OutsideBounds,0);
+    end;
+    do return haxe.io.Bytes.new(len,self.b:slice(pos,pos + len)) end
+  end,
+  'getString', function(self,pos,len) 
+    if (((pos < 0) or (len < 0)) or ((pos + len) > self.length)) then 
+      _G.error(haxe.io.Error.OutsideBounds,0);
+    end;
+    local b = self.b.length;
+    local begin = lua.Boot.__cast((function() 
+      local _hx_1
+      if (Math.isNaN(pos) or Math.isNaN(b)) then 
+      _hx_1 = (0/0); else 
+      _hx_1 = _G.math.min(pos,b); end
+      return _hx_1
+    end )() , Int);
+    local a = pos + len;
+    local b1 = self.b.length;
+    local _end = lua.Boot.__cast((function() 
+      local _hx_2
+      if (Math.isNaN(a) or Math.isNaN(b1)) then 
+      _hx_2 = (0/0); else 
+      _hx_2 = _G.math.min(a,b1); end
+      return _hx_2
+    end )() , Int);
+    local _g = _hx_tab_array({ }, 0);
+    local _g2 = begin;
+    local _g1 = _end;
+    while (_g2 < _g1) do 
+      _g2 = _g2 + 1;
+      local i = _g2 - 1;
+      _g:push(_G.string.char(self.b[i]));
+      end;
+    do return _g:join("") end
+  end,
+  'toString', function(self) 
+    do return self:getString(0,self.length) end
+  end
+  ,'__class__',  haxe.io.Bytes
+)
+
+haxe.crypto.Base64.new = {}
+haxe.crypto.Base64.__name__ = true
+haxe.crypto.Base64.encode = function(bytes,complement) 
+  if (complement == nil) then 
+    complement = true;
+  end;
+  local str = haxe.crypto.BaseCode.new(haxe.crypto.Base64.BYTES):encodeBytes(bytes):toString();
+  if (complement) then 
+    local _g = _G.math.fmod(bytes.length, 3);
+    local _g1 = _g;
+    if (_g1) == 1 then 
+      str = str .. "==";
+    elseif (_g1) == 2 then 
+      str = str .. "=";else end;
+  end;
+  do return str end;
+end
+
+haxe.crypto.BaseCode.new = function(base) 
+  local self = _hx_new(haxe.crypto.BaseCode.prototype)
+  haxe.crypto.BaseCode.super(self,base)
+  return self
+end
+haxe.crypto.BaseCode.super = function(self,base) 
+  local len = base.length;
+  local nbits = 1;
+  while (len > (_hx_bit.lshift(1,nbits))) do 
+    nbits = nbits + 1;
+    end;
+  if ((nbits > 8) or (len ~= (_hx_bit.lshift(1,nbits)))) then 
+    _G.error("BaseCode : base length must be a power of two.",0);
+  end;
+  self.base = base;
+  self.nbits = nbits;
+end
+haxe.crypto.BaseCode.__name__ = true
+haxe.crypto.BaseCode.prototype = _hx_a(
+  'encodeBytes', function(self,b) 
+    local nbits = self.nbits;
+    local base = self.base;
+    local size = Std.int((b.length * 8) / nbits);
+    local out = haxe.io.Bytes.alloc(size + (function() 
+      local _hx_1
+      if ((_G.math.fmod(b.length * 8, nbits)) == 0) then 
+      _hx_1 = 0; else 
+      _hx_1 = 1; end
+      return _hx_1
+    end )());
+    local buf = 0;
+    local curbits = 0;
+    local mask = (_hx_bit.lshift(1,nbits)) - 1;
+    local pin = 0;
+    local pout = 0;
+    while (pout < size) do 
+      while (curbits < nbits) do 
+        curbits = curbits + 8;
+        buf = _hx_bit.lshift(buf,8);
+        pin = pin + 1;
+        buf = _hx_bit.bor(buf,b.b[pin - 1]);
+        end;
+      curbits = curbits - nbits;
+      pout = pout + 1;
+      out.b[pout - 1] = _hx_bit.band(base.b[_hx_bit.band(_hx_bit.arshift(buf,curbits),mask)],255);
+      end;
+    if (curbits > 0) then 
+      pout = pout + 1;
+      out.b[pout - 1] = _hx_bit.band(base.b[_hx_bit.band(_hx_bit.lshift(buf,nbits - curbits),mask)],255);
+    end;
+    do return out end
+  end,
+  'initTable', function(self) 
+    local tbl = Array.new();
+    local _g = 0;
+    while (_g < 256) do 
+      _g = _g + 1;
+      local i = _g - 1;
+      tbl[i] = -1;
+      end;
+    local _g1 = 0;
+    local _g2 = self.base.length;
+    while (_g1 < _g2) do 
+      _g1 = _g1 + 1;
+      local i1 = _g1 - 1;
+      tbl[self.base.b[i1]] = i1;
+      end;
+    self.tbl = tbl;
+  end,
+  'decodeBytes', function(self,b) 
+    local nbits = self.nbits;
+    local base = self.base;
+    if (self.tbl == nil) then 
+      self:initTable();
+    end;
+    local tbl = self.tbl;
+    local size = _hx_bit.arshift(b.length * nbits,3);
+    local out = haxe.io.Bytes.alloc(size);
+    local buf = 0;
+    local curbits = 0;
+    local pin = 0;
+    local pout = 0;
+    while (pout < size) do 
+      while (curbits < 8) do 
+        curbits = curbits + nbits;
+        buf = _hx_bit.lshift(buf,nbits);
+        pin = pin + 1;
+        local i = tbl[b.b[pin - 1]];
+        if (i == -1) then 
+          _G.error("BaseCode : invalid encoded char",0);
+        end;
+        buf = _hx_bit.bor(buf,i);
+        end;
+      curbits = curbits - 8;
+      pout = pout + 1;
+      out.b[pout - 1] = _hx_bit.band(_hx_bit.band(_hx_bit.arshift(buf,curbits),255),255);
+      end;
+    do return out end
+  end
+  ,'__class__',  haxe.crypto.BaseCode
+)
+
+haxe.crypto.Sha1.new = function() 
+  local self = _hx_new(haxe.crypto.Sha1.prototype)
+  haxe.crypto.Sha1.super(self)
+  return self
+end
+haxe.crypto.Sha1.super = function(self) 
+end
+haxe.crypto.Sha1.__name__ = true
+haxe.crypto.Sha1.encode = function(s) 
+  local sh = haxe.crypto.Sha1.new();
+  local h = sh:doEncode(haxe.crypto.Sha1.str2blks(s));
+  do return sh:hex(h) end;
+end
+haxe.crypto.Sha1.str2blks = function(s) 
+  local s1 = haxe.io.Bytes.ofString(s);
+  local nblk = (_hx_bit.arshift(s1.length + 8,6)) + 1;
+  local blks = Array.new();
+  local _g1 = 0;
+  local _g = nblk * 16;
+  while (_g1 < _g) do 
+    _g1 = _g1 + 1;
+    local i = _g1 - 1;
+    blks[i] = 0;
+    end;
+  local _g11 = 0;
+  local _g2 = s1.length;
+  while (_g11 < _g2) do 
+    _g11 = _g11 + 1;
+    local i1 = _g11 - 1;
+    local p = _hx_bit.arshift(i1,2);
+    local blks1 = blks;
+    local p1 = p;
+    blks1[p1] = _hx_bit.bor(blks1[p1],_hx_bit.lshift(s1.b[i1],24 - (_hx_bit.lshift((_hx_bit.band(i1,3)),3))));
+    end;
+  local i2 = s1.length;
+  local p2 = _hx_bit.arshift(i2,2);
+  local blks2 = blks;
+  local p3 = p2;
+  blks2[p3] = _hx_bit.bor(blks2[p3],_hx_bit.lshift(128,24 - (_hx_bit.lshift((_hx_bit.band(i2,3)),3))));
+  blks[(nblk * 16) - 1] = s1.length * 8;
+  do return blks end;
+end
+haxe.crypto.Sha1.prototype = _hx_a(
+  'doEncode', function(self,x) 
+    local w = Array.new();
+    local a = 1732584193;
+    local b = -271733879;
+    local c = -1732584194;
+    local d = 271733878;
+    local e = -1009589776;
+    local i = 0;
+    while (i < x.length) do 
+      local olda = a;
+      local oldb = b;
+      local oldc = c;
+      local oldd = d;
+      local olde = e;
+      local j = 0;
+      while (j < 80) do 
+        if (j < 16) then 
+          w[j] = x[i + j];
+        else
+          local num = _hx_bit.bxor(_hx_bit.bxor(_hx_bit.bxor(w[j - 3],w[j - 8]),w[j - 14]),w[j - 16]);
+          w[j] = _hx_bit.bor(_hx_bit.lshift(num,1),_hx_bit.rshift(num,31));
+        end;
+        local t = ((((_hx_bit.bor(_hx_bit.lshift(a,5),_hx_bit.rshift(a,27))) + self:ft(j,b,c,d)) + e) + w[j]) + self:kt(j);
+        e = d;
+        d = c;
+        c = _hx_bit.bor(_hx_bit.lshift(b,30),_hx_bit.rshift(b,2));
+        b = a;
+        a = t;
+        j = j + 1;
+        end;
+      a = a + olda;
+      b = b + oldb;
+      c = c + oldc;
+      d = d + oldd;
+      e = e + olde;
+      i = i + 16;
+      end;
+    do return _hx_tab_array({[0]=a, b, c, d, e }, 5) end
+  end,
+  'ft', function(self,t,b,c,d) 
+    if (t < 20) then 
+      do return _hx_bit.bor(_hx_bit.band(b,c),_hx_bit.band(_hx_bit.bnot(b),d)) end;
+    end;
+    if (t < 40) then 
+      do return _hx_bit.bxor(_hx_bit.bxor(b,c),d) end;
+    end;
+    if (t < 60) then 
+      do return _hx_bit.bor(_hx_bit.bor(_hx_bit.band(b,c),_hx_bit.band(b,d)),_hx_bit.band(c,d)) end;
+    end;
+    do return _hx_bit.bxor(_hx_bit.bxor(b,c),d) end
+  end,
+  'kt', function(self,t) 
+    if (t < 20) then 
+      do return 1518500249 end;
+    end;
+    if (t < 40) then 
+      do return 1859775393 end;
+    end;
+    if (t < 60) then 
+      do return -1894007588 end;
+    end;
+    do return -899497514 end
+  end,
+  'hex', function(self,a) 
+    local str = "";
+    local _g = 0;
+    while (_g < a.length) do 
+      local num = a[_g];
+      _g = _g + 1;
+      str = str .. StringTools.hex(num,8);
+      end;
+    do return str:toLowerCase() end
+  end
+  ,'__class__',  haxe.crypto.Sha1
+)
+
 haxe.ds.IntMap.new = function() 
   local self = _hx_new(haxe.ds.IntMap.prototype)
   haxe.ds.IntMap.super(self)
@@ -1582,66 +2192,6 @@ haxe.ds.StringMap.prototype = _hx_a(
     end}) end
   end
   ,'__class__',  haxe.ds.StringMap
-)
-
-haxe.io.Bytes.new = function(length,b) 
-  local self = _hx_new(haxe.io.Bytes.prototype)
-  haxe.io.Bytes.super(self,length,b)
-  return self
-end
-haxe.io.Bytes.super = function(self,length,b) 
-  self.length = length;
-  self.b = b;
-end
-haxe.io.Bytes.__name__ = true
-haxe.io.Bytes.ofString = function(s) 
-  local _g = _hx_tab_array({ }, 0);
-  local _g2 = 0;
-  local _g1 = s.length;
-  while (_g2 < _g1) do 
-    _g2 = _g2 + 1;
-    local c = _g2 - 1;
-    _g:push(_G.string.byte(s,c + 1));
-    end;
-  local bytes = _g;
-  do return haxe.io.Bytes.new(bytes.length,bytes) end;
-end
-haxe.io.Bytes.prototype = _hx_a(
-  'getString', function(self,pos,len) 
-    if (((pos < 0) or (len < 0)) or ((pos + len) > self.length)) then 
-      _G.error(haxe.io.Error.OutsideBounds,0);
-    end;
-    local b = self.b.length;
-    local begin = lua.Boot.__cast((function() 
-      local _hx_1
-      if (Math.isNaN(pos) or Math.isNaN(b)) then 
-      _hx_1 = (0/0); else 
-      _hx_1 = _G.math.min(pos,b); end
-      return _hx_1
-    end )() , Int);
-    local a = pos + len;
-    local b1 = self.b.length;
-    local _end = lua.Boot.__cast((function() 
-      local _hx_2
-      if (Math.isNaN(a) or Math.isNaN(b1)) then 
-      _hx_2 = (0/0); else 
-      _hx_2 = _G.math.min(a,b1); end
-      return _hx_2
-    end )() , Int);
-    local _g = _hx_tab_array({ }, 0);
-    local _g2 = begin;
-    local _g1 = _end;
-    while (_g2 < _g1) do 
-      _g2 = _g2 + 1;
-      local i = _g2 - 1;
-      _g:push(_G.string.char(self.b[i]));
-      end;
-    do return _g:join("") end
-  end,
-  'toString', function(self) 
-    do return self:getString(0,self.length) end
-  end
-  ,'__class__',  haxe.io.Bytes
 )
 
 haxe.io.BytesBuffer.new = function() 
@@ -2168,6 +2718,8 @@ haxe.EntryPoint.sleepLock = haxe._EntryPoint.Lock.new()
 haxe.EntryPoint.mutex = haxe._EntryPoint.Mutex.new()
 haxe.EntryPoint.pending = Array.new()
 haxe.EntryPoint.threadCount = 0
+haxe.crypto.Base64.CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+haxe.crypto.Base64.BYTES = haxe.io.Bytes.ofString(haxe.crypto.Base64.CHARS)
 lua.Boot.hiddenFields = {__id__=true, hx__closures=true, super=true, prototype=true, __fields__=true, __ifields__=true, __class__=true, __properties__=true}
 do
 

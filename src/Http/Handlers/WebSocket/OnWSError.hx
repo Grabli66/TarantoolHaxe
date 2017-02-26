@@ -20,21 +20,6 @@
 */
 
 /**
- *  Options for Chocolate app
+ *  Callback on websocket error
  */
-typedef AppOptions = {
-    /**
-     *  Port to listen
-     */
-    Port : Int,
-
-    /**
-     *  Dir for static content
-     */
-    ?StaticDir : String,
-
-    /**
-     *  Can handle websockets
-     */
-    ?HandleWebSocket : Bool
-}
+typedef OnWSError = Peer -> Dynamic -> Void;

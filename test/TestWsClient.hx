@@ -4,13 +4,13 @@ import js.html.BinaryType;
 
 class TestWsClient {
     static function main () {
-        var ws = new WebSocket ("ws://localhost:3301");
+        var ws = new WebSocket ("ws://localhost:8081");
         ws.binaryType = BinaryType.ARRAYBUFFER;
         ws.onopen = function (s) {
             trace ("OPEN");
             var buff = Bytes.ofString ("123");
             //trace (buff.toHex ());
-            ws.send (buff.getData ());
+            //ws.send (buff.getData ());
         }
 
         ws.onclose = function (s) {

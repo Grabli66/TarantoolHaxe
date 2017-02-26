@@ -20,21 +20,6 @@
 */
 
 /**
- *  Options for Chocolate app
+ *  Callback for websocket close
  */
-typedef AppOptions = {
-    /**
-     *  Port to listen
-     */
-    Port : Int,
-
-    /**
-     *  Dir for static content
-     */
-    ?StaticDir : String,
-
-    /**
-     *  Can handle websockets
-     */
-    ?HandleWebSocket : Bool
-}
+typedef OnWSClose = Peer -> Void;
