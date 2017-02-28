@@ -47,13 +47,14 @@ class Chocolate {
     /**
      *  Web socket instance
      */
-    public var WebSocket (default, null) : WebSocket;
+    public static var WebSocket (default, null) : WebSocket;
 
     /**
      *  On init class
      */
     private static function __init__ () : Void {
         App = new Chocolate ();
+        WebSocket = new WebSocket ();
     }
 
     /**
@@ -62,8 +63,7 @@ class Chocolate {
     private function new () {
         _httpServer = new HttpServer ();
         _routes = new Map<String, Route> ();
-        _errorHandlers = new Map<HttpStatus, RequestCall> ();
-        this.WebSocket = new WebSocket ();
+        _errorHandlers = new Map<HttpStatus, RequestCall> ();        
     }
 
     /**
@@ -95,7 +95,7 @@ class Chocolate {
     private function OnHttpRequest (c : HttpContext) : Void {
         try {
             for (kv in _routes) {
-                if (kv.IsMatch (c.Request.Resource)) {
+                if (kv.IsMatch (c.Request.Resource)) {                    
                     var req = new Request (c.Request);
                     var resp = kv.Process (req);
                     WriteResponse (c, resp);
@@ -105,7 +105,7 @@ class Chocolate {
         } catch (e : Dynamic) {
             trace (e);
         }
-    }
+    }    
 
     /**
      *  Add route for get method
@@ -138,22 +138,22 @@ class Chocolate {
      *  Start listen
      *  @param options - various options like port to listen
      */
-    public function Listen (options : AppOptions) {
-        var httpHandler = new HttpHandler (OnHttpRequest);
-        var errorHandler = new ErrorHandler (OnHttpError);
-        _httpServer.AddHandler (errorHandler);
-
-        if (options.HandleWebSocket != null) {
-            var wshandler = new WebSocketHandler (WebSocket.Handler);
+    public function Listen (options : AppOptions) : Void {
+        if (options.WebSocket != null) {
+            var wshandler = new WebSocketHandler (WebSocket.OnErrorHandler);
             _httpServer.AddHandler (wshandler);
         }
+
+        var errorHandler = new ErrorHandler (OnHttpError);
+        _httpServer.AddHandler (errorHandler);
 
         if (options.StaticDir != null) {
             var staticHandler = new StaticHandler ();
             staticHandler.AddPath (options.StaticDir);
             _httpServer.AddHandler (staticHandler);
         }
-        
+
+        var httpHandler = new HttpHandler (OnHttpRequest);
         _httpServer.AddHandler (httpHandler);
         _httpServer.Bind ("*", options.Port);
     }

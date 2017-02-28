@@ -19,17 +19,28 @@
  * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+import haxe.io.Bytes;
+
 /**
  *  Web socket handler for http server
  */
-class WebSocketHandler extends Handler {
+class WebSocketHandler extends Handler {    
+    /**
+     *  Callbacks
+     */
     private var _handler : WSHandler;
+
+    private var _onError : OnWSError;
 
     /**
      *  Constructor
      */
-    public function new (handler : WSHandler) {
+    /*public function new (handler : WSHandler) {
         _handler = handler;
+    }*/
+
+    public function new (handler : OnWSError) {
+        _onError = handler;
     }
 
     /**
@@ -37,12 +48,22 @@ class WebSocketHandler extends Handler {
      *  @param context - Http context
      */
     public override function Process (context : HttpContext) : Void {
-        if (!context.Request.Headers.exists ("Upgrade")) return;
-        var ih = new InternalHandler (context);
-        ih.OnConnect = _handler.OnConnect;
-        ih.OnData = _handler.OnData;        
-        ih.OnClose = _handler.OnClose;
-        ih.OnError = _handler.OnError;
-        ih.Start ();
+        if (context.Request.Headers.exists ("Upgrade")) {        
+            var ih = new InternalHandler (context);
+            ih.OnConnect = function (p : Peer, c : IWriteChannel) {
+            };
+
+            ih.OnData = function (p : Peer, data : Bytes, c : IWriteChannel) {
+            };
+
+            /*ih.OnConnect = _handler.OnConnect;
+            ih.OnData = _handler.OnData;
+            ih.OnClose = _handler.OnClose;
+            ih.OnError = _handler.OnError;   */
+            ih.OnError = _onError;         
+            ih.Start ();
+        } else {
+            CallNext (context);
+        }
     }
 }

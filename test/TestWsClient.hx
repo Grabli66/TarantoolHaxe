@@ -8,9 +8,8 @@ class TestWsClient {
         ws.binaryType = BinaryType.ARRAYBUFFER;
         ws.onopen = function (s) {
             trace ("OPEN");
-            var buff = Bytes.ofString ("123");
-            //trace (buff.toHex ());
-            //ws.send (buff.getData ());
+            //var buff = Bytes.ofString ("123");
+            ws.send ("134");
         }
 
         ws.onclose = function (s) {

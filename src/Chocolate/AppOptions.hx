@@ -36,5 +36,5 @@ typedef AppOptions = {
     /**
      *  Can handle websockets
      */
-    ?HandleWebSocket : Bool
+    ?WebSocket : Bool
 }

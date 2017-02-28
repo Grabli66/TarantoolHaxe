@@ -30,7 +30,7 @@ class HttpServer {
                 var context = new HttpContext (request, response);
                 _firstHandler.Process (context);
             }        
-        } catch (e : Dynamic) {            
+        } catch (e : Dynamic) {
             trace (e);
             channel.Close ();
         }

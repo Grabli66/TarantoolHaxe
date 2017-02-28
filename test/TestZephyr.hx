@@ -1,10 +1,12 @@
 import Chocolate.App;
+import Chocolate.WebSocket;
 import HtmlBuilder.*;
 import haxe.io.Bytes;
 
 class TestZephyr {
-    static function main () {
+    static function main () {        
         App.Get ("/", function (req : Request) {
+            trace (req.Headers);
             return html ([
                     head (),
                     body ([
@@ -25,17 +27,23 @@ class TestZephyr {
                 ]);
         });
 
-        App.WebSocket.OnConnect (function (p : Peer, c : IWriteChannel) {
+/*        WebSocket.OnConnect (function (p : Peer, c : IWriteChannel) {
             trace ("CONNECTED");
+            //c.WriteString ("COOL");
         });
-        App.WebSocket.OnData (function (p : Peer, data : Bytes, c : IWriteChannel) {
-            trace ("DATA");
+
+        WebSocket.OnData (function (p : Peer, data : Bytes, c : IWriteChannel) {
+            trace (data.toString ());
         });
+
+        WebSocket.OnError (function (p : Peer, e : Dynamic) {
+            trace (e);
+        });*/
 
         App.Listen ({
             Port : 8081,
             StaticDir : "./out/media",
-            HandleWebSocket : true           
+            WebSocket : true           
         });
     }
 }

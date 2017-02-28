@@ -28,7 +28,9 @@ class WebSocket {
     /**
      *  Callbacks
      */
-    public var Handler : WSHandler = null;
+    public var Handler : WSHandler;
+
+    public var OnErrorHandler : OnWSError;
 
     /**
      *  Constructor
@@ -55,6 +57,7 @@ class WebSocket {
     }
 
     public function OnError (call : OnWSError) {
-        Handler.OnError = call;
+        //Handler.OnError = call;                
+        OnErrorHandler = call;
     }
 }

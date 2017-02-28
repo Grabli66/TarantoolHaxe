@@ -31,7 +31,7 @@ class Route {
     /**
      *  Callback for process request
      */
-    private var _call : RequestCall;
+    private var _call : RequestCall;    
 
     /**
      *  Constructor
@@ -55,7 +55,7 @@ class Route {
      *  @param request - request converted from http request
      *  @return Response
      */
-    public function Process (request : Request) : Response {
+    public function Process (request : Request) : Response {        
         return _call (request);
     }
 }

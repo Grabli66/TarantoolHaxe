@@ -390,20 +390,14 @@ WebSocket.new = function()
   return self
 end
 WebSocket.super = function(self) 
-  self.Handler = nil;
   self.Handler = _hx_o({__fields__={OnConnect=true,OnData=true},OnConnect=function(p,c) 
   end,OnData=function(p1,data,c1) 
   end});
 end
 WebSocket.__name__ = true
 WebSocket.prototype = _hx_a(
-  'OnConnect', function(self,call) 
-    self.Handler.OnConnect = call;
-  end,
-  'OnData', function(self,call) 
-    self.Handler.OnData = call;
-  end
-  ,'__class__',  WebSocket
+  
+  '__class__',  WebSocket
 )
 
 Chocolate.new = function() 
@@ -415,7 +409,6 @@ Chocolate.super = function(self)
   self._httpServer = HttpServer.new();
   self._routes = haxe.ds.StringMap.new();
   self._errorHandlers = haxe.ds.IntMap.new();
-  self.WebSocket = WebSocket.new();
 end
 Chocolate.__name__ = true
 Chocolate.prototype = _hx_a(
@@ -451,9 +444,12 @@ Chocolate.prototype = _hx_a(
       haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="Chocolate.hx",lineNumber=106,className="Chocolate",methodName="OnHttpRequest"}));
      elseif _hx_result ~= _hx_expected_result then return _hx_result end;
   end,
+  'Test', function(self,r) 
+    do return _Response.Response_Impl_._new(AppResponse.string("")) end
+  end,
   'Get', function(self,pattern,call) 
     local this1 = self._routes;
-    local v = Route.new(pattern,call);
+    local v = Route.new(pattern,_hx_bind(self,self.Test));
     local _this = this1;
     _this.v[pattern] = v;
     _this.k[pattern] = true;
@@ -462,18 +458,18 @@ Chocolate.prototype = _hx_a(
     self._errorHandlers:set(err,call);
   end,
   'Listen', function(self,options) 
-    local httpHandler = HttpHandler.new(_hx_bind(self,self.OnHttpRequest));
-    local errorHandler = ErrorHandler.new(_hx_bind(self,self.OnHttpError));
-    self._httpServer:AddHandler(errorHandler);
-    if (options.HandleWebSocket ~= nil) then 
-      local wshandler = WebSocketHandler.new(self.WebSocket.Handler);
+    if (options.WebSocket ~= nil) then 
+      local wshandler = WebSocketHandler.new(Chocolate.WebSocket.OnErrorHandler);
       self._httpServer:AddHandler(wshandler);
     end;
+    local errorHandler = ErrorHandler.new(_hx_bind(self,self.OnHttpError));
+    self._httpServer:AddHandler(errorHandler);
     if (options.StaticDir ~= nil) then 
       local staticHandler = StaticHandler.new();
       staticHandler:AddPath(options.StaticDir);
       self._httpServer:AddHandler(staticHandler);
     end;
+    local httpHandler = HttpHandler.new(_hx_bind(self,self.OnHttpRequest));
     self._httpServer:AddHandler(httpHandler);
     self._httpServer:Bind("*",options.Port);
   end
@@ -1475,6 +1471,7 @@ TestZephyr.new = {}
 TestZephyr.__name__ = true
 TestZephyr.main = function() 
   Chocolate.App:Get("/",function(req) 
+    haxe.Log.trace(req.Headers:toString(),_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="TestZephyr.hx",lineNumber=9,className="TestZephyr",methodName="main"}));
     local tmp = HtmlBuilder.head();
     local tmp1 = HtmlBuilder.p(_hx_o({__fields__={text=true},text="Hello world!"}));
     do return _Tag.Tag_Impl_.ToResponse(HtmlBuilder.html(nil,_hx_tab_array({[0]=tmp, HtmlBuilder.body(nil,_hx_tab_array({[0]=HtmlBuilder.div(_hx_o({__fields__={text=true,css=true},text="GOOD",css="shit"}),_hx_tab_array({[0]=tmp1 }, 1)), HtmlBuilder.div() }, 2)) }, 2))) end;
@@ -1482,13 +1479,7 @@ TestZephyr.main = function()
   Chocolate.App:OnError(404,function(req1) 
     do return _Tag.Tag_Impl_.ToResponse(HtmlBuilder.html(nil,_hx_tab_array({[0]=HtmlBuilder.head(), HtmlBuilder.body(nil,_hx_tab_array({[0]=HtmlBuilder.h1(_hx_o({__fields__={text=true},text="Not found!"})) }, 1)) }, 2))) end;
   end);
-  Chocolate.App.WebSocket:OnConnect(function(p,c) 
-    haxe.Log.trace("CONNECTED",_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="TestZephyr.hx",lineNumber=29,className="TestZephyr",methodName="main"}));
-  end);
-  Chocolate.App.WebSocket:OnData(function(p1,data,c1) 
-    haxe.Log.trace("DATA",_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="TestZephyr.hx",lineNumber=32,className="TestZephyr",methodName="main"}));
-  end);
-  Chocolate.App:Listen(_hx_o({__fields__={Port=true,StaticDir=true},Port=8081,StaticDir="./out/media"}));
+  Chocolate.App:Listen(_hx_o({__fields__={Port=true,StaticDir=true,WebSocket=true},Port=8081,StaticDir="./out/media",WebSocket=true}));
 end
 
 TextTag.new = function(name,options,tags) 
@@ -1571,21 +1562,23 @@ WebSocketHandler.new = function(handler)
   return self
 end
 WebSocketHandler.super = function(self,handler) 
-  self._handler = handler;
+  self._onError = handler;
 end
 WebSocketHandler.__name__ = true
 WebSocketHandler.prototype = _hx_a(
   'Process', function(self,context) 
     local this1 = context.Request.Headers;
-    if (not (this1.k["Upgrade"] or false)) then 
-      do return end;
+    if ((this1.k["Upgrade"] or false)) then 
+      local ih = InternalHandler.new(context);
+      ih.OnConnect = function(self,p,c) 
+       end;
+      ih.OnData = function(self,p1,data,c1) 
+       end;
+      ih.OnError = self._onError;
+      ih:Start();
+    else
+      self:CallNext(context);
     end;
-    local ih = InternalHandler.new(context);
-    ih.OnConnect = self._handler.OnConnect;
-    ih.OnData = self._handler.OnData;
-    ih.OnClose = self._handler.OnClose;
-    ih.OnError = self._handler.OnError;
-    ih:Start();
   end
   ,'__class__',  WebSocketHandler
 )
@@ -2190,6 +2183,37 @@ haxe.ds.StringMap.prototype = _hx_a(
     end,next=function() 
       do return _gthis.v[it:next()] end;
     end}) end
+  end,
+  'toString', function(self) 
+    local s_length;
+    local s_b = _hx_e();
+    s_length = 0;
+    local str = "{";
+    _G.table.insert(s_b,str);
+    s_length = s_length + str.length;
+    local it = self:keys();
+    local i = it;
+    while (i:hasNext()) do 
+      local i1 = i:next();
+      local str1 = Std.string(i1);
+      _G.table.insert(s_b,str1);
+      s_length = s_length + str1.length;
+      local str2 = " => ";
+      _G.table.insert(s_b,str2);
+      s_length = s_length + str2.length;
+      local str3 = Std.string(Std.string(self.v[i1]));
+      _G.table.insert(s_b,str3);
+      s_length = s_length + str3.length;
+      if (it:hasNext()) then 
+        local str4 = ", ";
+        _G.table.insert(s_b,str4);
+        s_length = s_length + str4.length;
+      end;
+      end;
+    local str5 = "}";
+    _G.table.insert(s_b,str5);
+    s_length = s_length + str5.length;
+    do return _G.table.concat(s_b) end
   end
   ,'__class__',  haxe.ds.StringMap
 )
@@ -2724,6 +2748,7 @@ lua.Boot.hiddenFields = {__id__=true, hx__closures=true, super=true, prototype=t
 do
 
 Chocolate.App = Chocolate.new();
+Chocolate.WebSocket = WebSocket.new();
 if (lua.lib.lrexlib.Rex == nil) then 
   _G.error("Rex is missing.  Please install lrexlib-pcre.",0);
 end;
@@ -2732,6 +2757,7 @@ String.prototype.__class__ = String;
 String.__name__ = true;
 Array.__name__ = true;
 Chocolate.App = Chocolate.new();
+Chocolate.WebSocket = WebSocket.new();
 if (lua.lib.lrexlib.Rex == nil) then 
   _G.error("Rex is missing.  Please install lrexlib-pcre.",0);
 end;

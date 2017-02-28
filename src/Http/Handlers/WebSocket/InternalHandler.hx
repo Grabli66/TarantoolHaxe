@@ -129,7 +129,7 @@ class InternalHandler implements IWriteChannel {
     /**
         Process handshake from client
     **/
-    private function ProcessHandshake () : Void {
+    private function ProcessHandshake () : Void {        
         var key = _headers[SecWebSocketKey] + WS_GUID;
         var sha = Sha1.encode (key);
         var shaKey = Base64.encode (decode (sha));
@@ -141,7 +141,7 @@ class InternalHandler implements IWriteChannel {
         stringBuffer.add ("\r\n");
         _channel.WriteString (stringBuffer.toString ());
         _state = WorkState.FRAME_TYPE;
-        OnConnect (_peer, this);
+        OnConnect (_peer, this);        
     }
 
     /**
@@ -156,7 +156,7 @@ class InternalHandler implements IWriteChannel {
             _frameType = FrameType.CLOSE;
         } else if ((frame & 0x02) > 0) {
             _frameType = FrameType.BINARY;
-        } else {
+        } else {                        
             throw "Only binary frame allowed";
         }
 
@@ -256,7 +256,7 @@ class InternalHandler implements IWriteChannel {
         }
         catch (e : Dynamic) {
             PushError (e);
-            Disconnect ();            
+            Disconnect ();
         }
     }    
 

@@ -32,7 +32,7 @@ class Request {
      *  Constructor. Converts http request to app request
      *  @param request - Http request from http server
      */
-    public function new (request : HttpRequest) {
-        Headers = request.Headers;
+    public function new (request : HttpRequest) {        
+        Headers = request.Headers;        
     }
 }
