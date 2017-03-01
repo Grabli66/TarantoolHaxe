@@ -31,14 +31,17 @@ class Route {
     /**
      *  Callback for process request
      */
-    private var _call : RequestCall;    
+    private var _call : RequestCall;
 
     /**
      *  Constructor
      *  @param pattern - pattern for request. Example: /mypage/:id
      */
     public function new (pattern : String, call : RequestCall) {
-        _call = call;
+        // Bug?
+        _call = function (r : Request) : Response {
+            return call (r);
+        };
     }
 
     /**
@@ -46,8 +49,8 @@ class Route {
      *  @param path - request path
      *  @return Bool
      */
-    public function IsMatch (path : String) : Bool {
-        return true;
+    public function IsMatch (path : String) : Bool {        
+        return _pattern == path;
     }
 
     /**

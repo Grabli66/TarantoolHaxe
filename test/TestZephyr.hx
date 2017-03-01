@@ -5,8 +5,7 @@ import haxe.io.Bytes;
 
 class TestZephyr {
     static function main () {        
-        App.Get ("/", function (req : Request) {
-            trace (req.Headers);
+        App.Get ("/", function (req : Request) {                        
             return html ([
                     head (),
                     body ([
@@ -18,7 +17,7 @@ class TestZephyr {
                 ]);
         });
 
-        App.OnError (HttpStatus.NotFound, function (req : Request) {
+        App.OnError (HttpStatus.NotFound, function (req : Request) {            
             return html ([
                     head (),
                     body ([
@@ -27,9 +26,9 @@ class TestZephyr {
                 ]);
         });
 
-/*        WebSocket.OnConnect (function (p : Peer, c : IWriteChannel) {
+        WebSocket.OnConnect (function (p : Peer, c : IWriteChannel) {
             trace ("CONNECTED");
-            //c.WriteString ("COOL");
+            c.WriteString ("GOOD");
         });
 
         WebSocket.OnData (function (p : Peer, data : Bytes, c : IWriteChannel) {
@@ -38,7 +37,7 @@ class TestZephyr {
 
         WebSocket.OnError (function (p : Peer, e : Dynamic) {
             trace (e);
-        });*/
+        });
 
         App.Listen ({
             Port : 8081,

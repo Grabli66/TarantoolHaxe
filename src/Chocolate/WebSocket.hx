@@ -22,42 +22,113 @@
 import haxe.io.Bytes;
 
 /**
+ *  Web socket handler with callbacks
+ */
+class InternalWebSocketHandle implements IWSHandler {
+    /**
+     *  Connect handler
+     */
+    public var ConnectHandle : OnWSConnect;
+
+    /**
+     *  Data handler
+     */
+    public var DataHandle : OnWSData;
+    
+    /**
+     *  Close handler
+     */
+    public var CloseHandle : OnWSClose;
+
+    /**
+     *  Error handler
+     */
+    public var ErrorHandle : OnWSError;
+
+    /**
+     *  Constructor
+     */
+    public function new () {
+    }
+
+    /**
+     *  On connect callback
+     *  @param p - 
+     *  @param c - 
+     */
+    public function OnConnect (p : Peer, c : IWriteChannel) : Void {
+        if (ConnectHandle != null) ConnectHandle (p, c);
+    }
+
+    /**
+     *  On data callback
+     *  @param p - 
+     *  @param b - 
+     *  @param c - 
+     */
+    public function OnData (p : Peer, b : Bytes, c : IWriteChannel) : Void {
+        if (DataHandle != null) DataHandle (p, b, c);
+    }
+
+    /**
+     *  On connection close callback
+     *  @param p - 
+     */
+    public function OnClose (p : Peer) : Void {
+        if (CloseHandle != null) CloseHandle (p);
+    }
+
+    /**
+     *  On handler callback
+     *  @param p - 
+     *  @param e - 
+     */
+    public function OnError (p : Peer, e : Dynamic) : Void {
+        if (ErrorHandle != null) ErrorHandle (p, e);
+    }
+}
+
+/**
  *  Web socket
  */
 class WebSocket {
     /**
      *  Callbacks
      */
-    public var Handler : WSHandler;
-
-    public var OnErrorHandler : OnWSError;
+    public var Handle (default, null) : InternalWebSocketHandle;
 
     /**
      *  Constructor
      */
     public function new () {
-        Handler = {
-            OnConnect : function (p : Peer, c : IWriteChannel) {
-            },
-            OnData : function (p : Peer, data : Bytes, c : IWriteChannel) {
-            }
-        };
+       Handle = new InternalWebSocketHandle ();
     }
 
-    public function OnConnect (call : OnWSConnect) {
-        Handler.OnConnect = call;
+    public function OnConnect (call : OnWSConnect) : Void {
+        // Bug?
+        Handle.ConnectHandle = function (p, i) {
+            call (p, i);
+        }
     }
 
-    public function OnData (call : OnWSData) {
-        Handler.OnData = call;
+    public function OnData (call : OnWSData) : Void {
+        // Bug?
+        Handle.DataHandle = function (p, b, c) {
+            call (p, b, c);
+        }
     }
 
-    public function OnClose (call : OnWSClose) {
-        Handler.OnClose = call;
+    public function OnClose (call : OnWSClose) : Void {
+        // Bug?
+        Handle.CloseHandle = function (p) {
+            call (p);
+        }
     }
 
-    public function OnError (call : OnWSError) {
-        //Handler.OnError = call;                
-        OnErrorHandler = call;
+    public function OnError (call : OnWSError) : Void {
+        // Bug?
+        Handle.ErrorHandle = function (p, e) {
+            call (p, e);
+        }
     }
 }

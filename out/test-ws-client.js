@@ -7,6 +7,7 @@ TestWsClient.main = function() {
 	ws.onopen = function(s) {
 		console.log("OPEN");
 		ws.send("134");
+		ws.send("432");
 	};
 	ws.onclose = function(s1) {
 		console.log("CLOSE");

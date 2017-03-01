@@ -55,9 +55,9 @@ class HttpRequest {
     /**
         Read all headers
     **/
-    private function ReadHeaders (channel : IRWChannel) : Void {
+    private function ReadHeaders (channel : IRWChannel) : Void {        
         var line = channel.ReadUntil ("\n").trim ();
-        var parts = line.split (" ");        
+        var parts = line.split (" ");
         if (parts.length != 3) throw HttpStatus.BadRequest;
         Method = HttpMethod.createByName (parts[0].toLowerCase ());
         Resource = parts[1];

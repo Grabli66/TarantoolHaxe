@@ -10,6 +10,7 @@ class TestWsClient {
             trace ("OPEN");
             //var buff = Bytes.ofString ("123");
             ws.send ("134");
+            ws.send ("432");
         }
 
         ws.onclose = function (s) {

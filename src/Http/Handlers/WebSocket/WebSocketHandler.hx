@@ -28,19 +28,13 @@ class WebSocketHandler extends Handler {
     /**
      *  Callbacks
      */
-    private var _handler : WSHandler;
-
-    private var _onError : OnWSError;
-
+    private var _handler : IWSHandler;
+    
     /**
      *  Constructor
      */
-    /*public function new (handler : WSHandler) {
-        _handler = handler;
-    }*/
-
-    public function new (handler : OnWSError) {
-        _onError = handler;
+    public function new (handler : IWSHandler) {
+        _handler = handler;   
     }
 
     /**
@@ -48,21 +42,14 @@ class WebSocketHandler extends Handler {
      *  @param context - Http context
      */
     public override function Process (context : HttpContext) : Void {
-        if (context.Request.Headers.exists ("Upgrade")) {        
+        if (context.Request.Headers.exists ("Upgrade")) {
             var ih = new InternalHandler (context);
-            ih.OnConnect = function (p : Peer, c : IWriteChannel) {
-            };
-
-            ih.OnData = function (p : Peer, data : Bytes, c : IWriteChannel) {
-            };
-
-            /*ih.OnConnect = _handler.OnConnect;
+            ih.OnConnect = _handler.OnConnect;
             ih.OnData = _handler.OnData;
             ih.OnClose = _handler.OnClose;
-            ih.OnError = _handler.OnError;   */
-            ih.OnError = _onError;         
+            ih.OnError = _handler.OnError;
             ih.Start ();
-        } else {
+        } else {            
             CallNext (context);
         }
     }

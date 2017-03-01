@@ -93,18 +93,17 @@ class Chocolate {
      *  Process http request
      */
     private function OnHttpRequest (c : HttpContext) : Void {
-        try {
-            for (kv in _routes) {
-                if (kv.IsMatch (c.Request.Resource)) {                    
-                    var req = new Request (c.Request);
-                    var resp = kv.Process (req);
-                    WriteResponse (c, resp);
-                    break;
-                }
+        var found = false;
+        for (kv in _routes) {
+            if (kv.IsMatch (c.Request.Resource)) {                    
+                var req = new Request (c.Request);
+                var resp = kv.Process (req);
+                WriteResponse (c, resp);
+                found = true;
+                break;
             }
-        } catch (e : Dynamic) {
-            trace (e);
         }
+        if (!found) throw HttpStatus.NotFound;
     }    
 
     /**
@@ -113,7 +112,7 @@ class Chocolate {
      *  @param call - callback to handle request
      */
     public function Get (pattern : String, call : RequestCall) : Void {
-        _routes[pattern] = new Route (pattern, call);
+        _routes[pattern] = new Route (pattern, call);        
     }
 
     /**
@@ -139,8 +138,8 @@ class Chocolate {
      *  @param options - various options like port to listen
      */
     public function Listen (options : AppOptions) : Void {
-        if (options.WebSocket != null) {
-            var wshandler = new WebSocketHandler (WebSocket.OnErrorHandler);
+        if (options.WebSocket != null) {            
+            var wshandler = new WebSocketHandler (WebSocket.Handle);
             _httpServer.AddHandler (wshandler);
         }
 

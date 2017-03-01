@@ -122,8 +122,10 @@ class InternalHandler implements IWriteChannel {
     /**
         Send error through OnError
     **/
-    private function PushError (e : Dynamic) {
-        if (OnError != null) OnError (_peer, e);
+    private function PushError (e : Dynamic) {        
+        if (OnError != null) {
+            OnError (_peer, e);
+        }
     }
 
     /**
@@ -256,7 +258,7 @@ class InternalHandler implements IWriteChannel {
         }
         catch (e : Dynamic) {
             PushError (e);
-            Disconnect ();
+            //Disconnect ();
         }
     }    
 
