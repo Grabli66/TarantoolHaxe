@@ -35,6 +35,10 @@ class TestZephyr {
             trace (data.toString ());
         });
 
+        WebSocket.OnClose (function (p : Peer) {
+            trace ("CLOSE");
+        });
+
         WebSocket.OnError (function (p : Peer, e : Dynamic) {
             trace (e);
         });

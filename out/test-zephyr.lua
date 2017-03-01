@@ -271,6 +271,7 @@ HttpServer.prototype = _hx_a(
     local _hx_expected_result = {}
     local _hx_status, _hx_result = pcall(function() 
     
+        haxe.Log.trace("Accept client",_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="HttpServer.hx",lineNumber=27,className="HttpServer",methodName="ProcessClient"}));
         while (true) do 
           local request = HttpRequest.new(channel);
           local response = HttpResponse.new(channel);
@@ -281,7 +282,7 @@ HttpServer.prototype = _hx_a(
      if not _hx_status then 
       local _hx_1 = _hx_result
       local e = _hx_1
-      haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="HttpServer.hx",lineNumber=34,className="HttpServer",methodName="ProcessClient"}));
+      haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="HttpServer.hx",lineNumber=36,className="HttpServer",methodName="ProcessClient"}));
       channel:Close();
      elseif _hx_result ~= _hx_expected_result then return _hx_result end;
   end,
@@ -404,6 +405,11 @@ WebSocket.prototype = _hx_a(
   'OnData', function(self,call) 
     self.Handle.DataHandle = function(self,p,b,c) 
       call(p,b,c);
+     end;
+  end,
+  'OnClose', function(self,call) 
+    self.Handle.CloseHandle = function(self,p) 
+      call(p);
      end;
   end,
   'OnError', function(self,call) 
@@ -747,14 +753,18 @@ end
 HttpRequest.__name__ = true
 HttpRequest.prototype = _hx_a(
   'ReadHeaders', function(self,channel) 
-    local line = StringTools.trim(channel:ReadUntil("\n"));
+    local text = channel:ReadUntil("\n");
+    if (text == nil) then 
+      _G.error("Connection closed",0);
+    end;
+    local line = StringTools.trim(text);
     local parts = line:split(" ");
     if (parts.length ~= 3) then 
       _G.error(400,0);
     end;
     self.Method = Type.createEnum(HttpMethod,parts[0]:toLowerCase(),nil);
     self.Resource = tink._Url.Url_Impl_.parse(parts[1]);
-    haxe.Log.trace("" .. Std.string(self.Method) .. " " .. tink._Url.Url_Impl_.toString(self.Resource),_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="HttpRequest.hx",lineNumber=64,className="HttpRequest",methodName="ReadHeaders"}));
+    haxe.Log.trace("" .. Std.string(self.Method) .. " " .. tink._Url.Url_Impl_.toString(self.Resource),_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="HttpRequest.hx",lineNumber=66,className="HttpRequest",methodName="ReadHeaders"}));
     self.Headers = haxe.ds.StringMap.new();
     line = StringTools.trim(channel:ReadUntil("\n"));
     while (line.length > 0) do 
@@ -796,11 +806,30 @@ end
 HttpResponse.super = function(self,channel) 
   self.Status = 200;
   self.Channel = channel;
+  self.Headers = haxe.ds.StringMap.new();
   self:Reset();
 end
 HttpResponse.__name__ = true
 HttpResponse.__interfaces__ = {IWriteChannel}
 HttpResponse.prototype = _hx_a(
+  'WriteHeaders', function(self) 
+    local this1 = self.Headers;
+    local v = Std.string(self._buffer.b.length);
+    local _this = this1;
+    _this.v["Content-Length"] = v;
+    _this.k["Content-Length"] = true;
+    local _this1 = self.Headers;
+    _this1.v["Server"] = "tyrant";
+    _this1.k["Server"] = true;
+    local k = self.Headers:keys();
+    while (k:hasNext()) do 
+      local k1 = k:next();
+      local this2 = self.Headers;
+      local v1 = this2.v[k1];
+      self.Channel:WriteString("" .. k1 .. ": " .. v1 .. "\n");
+      end;
+    self.Channel:WriteString("\n");
+  end,
   'Reset', function(self) 
     self._buffer = haxe.io.BytesBuffer.new();
   end,
@@ -838,8 +867,7 @@ HttpResponse.prototype = _hx_a(
   'Close', function(self) 
     local descr = _HttpStatus.HttpStatus_Impl_.GetDescription(self.Status);
     self.Channel:WriteString("HTTP/1.1 " .. self.Status .. " " .. descr .. "\n");
-    self.Channel:WriteString("Content-Length: " .. self._buffer.b.length);
-    self.Channel:WriteString("\n\n");
+    self:WriteHeaders();
     self.Channel:Write(self._buffer:getBytes());
   end
   ,'__class__',  HttpResponse
@@ -859,7 +887,7 @@ _HttpStatus.HttpStatus_Impl_.GetDescription = function(this1)
     do return "Internal error" end; end;
   do return "Unknown" end;
 end
-_hxClasses["WorkState"] = { __ename__ = true, __constructs__ = _hx_tab_array({[0]="HANDSHAKE","FRAME_TYPE","LENGTH","DATA"},4)}
+_hxClasses["WorkState"] = { __ename__ = true, __constructs__ = _hx_tab_array({[0]="HANDSHAKE","FRAME_TYPE","LENGTH","DATA","CLOSE"},5)}
 WorkState = _hxClasses["WorkState"];
 WorkState.HANDSHAKE = _hx_tab_array({[0]="HANDSHAKE",0,__enum__ = WorkState},2)
 
@@ -868,6 +896,8 @@ WorkState.FRAME_TYPE = _hx_tab_array({[0]="FRAME_TYPE",1,__enum__ = WorkState},2
 WorkState.LENGTH = _hx_tab_array({[0]="LENGTH",2,__enum__ = WorkState},2)
 
 WorkState.DATA = _hx_tab_array({[0]="DATA",3,__enum__ = WorkState},2)
+
+WorkState.CLOSE = _hx_tab_array({[0]="CLOSE",4,__enum__ = WorkState},2)
 
 
 InternalHandler.new = function(context) 
@@ -922,15 +952,7 @@ InternalHandler.prototype = _hx_a(
   'ProcessFrame', function(self) 
     local binaryData = self._channel:Read(2);
     local frame = binaryData.b[0];
-    if ((_hx_bit.band(frame,8)) > 0) then 
-      self._frameType = 8;
-    else
-      if ((_hx_bit.band(frame,2)) > 0) then 
-        self._frameType = 2;
-      else
-        _G.error("Only binary frame allowed",0);
-      end;
-    end;
+    self._frameType = _hx_bit.band(frame,15);
     local len = binaryData.b[1];
     self._packLen = 0;
     if ((_hx_bit.band(len,128)) < 1) then 
@@ -960,7 +982,7 @@ InternalHandler.prototype = _hx_a(
     local binaryData = self._channel:Read(self._packLen + 4);
     local _g = self._frameType;
     local _g1 = _g;
-    if (_g1) == 2 then 
+    if (_g1) == 1 or (_g1) == 2 then 
       local mask = binaryData:sub(0,4);
       local data = binaryData:sub(4,binaryData.length - 4);
       local res = haxe.io.Bytes.alloc(data.length);
@@ -975,30 +997,57 @@ InternalHandler.prototype = _hx_a(
         res.b[i] = _hx_bit.band(d,255);
         end;
       self:OnData(self._peer,res,self);
-    elseif (_g1) == 8 then  end;
-    self._state = WorkState.FRAME_TYPE;
+      self._state = WorkState.FRAME_TYPE;
+    elseif (_g1) == 8 then 
+      self:OnClose(nil);
+      self._state = WorkState.CLOSE;
+      self:Disconnect();else
+    _G.error("Unknown frame",0); end;
+  end,
+  'Disconnect', function(self) 
+    local _hx_expected_result = {}
+    local _hx_status, _hx_result = pcall(function() 
+    
+        self._channel:Close();
+       return _hx_expected_result end)
+     if not _hx_status then 
+      local _hx_1 = _hx_result
+      local e = _hx_1
+      haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="InternalHandler.hx",lineNumber=231,className="InternalHandler",methodName="Disconnect"}));
+     elseif _hx_result ~= _hx_expected_result then return _hx_result end;
   end,
   'Start', function(self) 
     local _hx_expected_result = {}
     local _hx_status, _hx_result = pcall(function() 
     
-        while (true) do 
-          local _g = self._state;
-          local _g1 = _g[1];
-          if (_g1) == 0 then 
-            self:ProcessHandshake();
-          elseif (_g1) == 1 then 
-            self:ProcessFrame();
-          elseif (_g1) == 2 then 
-            self:ProcessLength();
-          elseif (_g1) == 3 then 
-            self:ProcessData(); end;
-          end;
+        local _hx_expected_result = {}
+        local _hx_status, _hx_result = pcall(function() 
+        
+          while (true) do 
+            local _g = self._state;
+            local _g1 = _g[1];
+            if (_g1) == 0 then 
+              self:ProcessHandshake();
+            elseif (_g1) == 1 then 
+              self:ProcessFrame();
+            elseif (_g1) == 2 then 
+              self:ProcessLength();
+            elseif (_g1) == 3 then 
+              self:ProcessData();
+            elseif (_g1) == 4 then 
+              _G.error("_hx__break__"); end;
+            
+        end
+         return _hx_expected_result end)
+         if not _hx_status then 
+         elseif _hx_result ~= _hx_expected_result then return _hx_result
+        end;
        return _hx_expected_result end)
      if not _hx_status then 
       local _hx_1 = _hx_result
       local e = _hx_1
       self:PushError(e);
+      self:Disconnect();
      elseif _hx_result ~= _hx_expected_result then return _hx_result end;
   end,
   'Write', function(self,data) 
@@ -1124,6 +1173,7 @@ Route.new = function(pattern,call)
   return self
 end
 Route.super = function(self,pattern,call) 
+  self._pattern = pattern;
   self._call = function(self,r) 
     do return call(r) end
    end;
@@ -1131,7 +1181,25 @@ end
 Route.__name__ = true
 Route.prototype = _hx_a(
   'IsMatch', function(self,path) 
-    do return self._pattern == path end
+    local items1 = path:split("/");
+    local items2 = self._pattern:split("/");
+    if (items1.length ~= items2.length) then 
+      do return false end;
+    end;
+    local _g = 0;
+    while (_g < items2.length) do 
+      local s2 = items2[_g];
+      _g = _g + 1;
+      local _g1 = 0;
+      while (_g1 < items1.length) do 
+        local s1 = items1[_g1];
+        _g1 = _g1 + 1;
+        if (s2 ~= s1) then 
+          do return false end;
+        end;
+        end;
+      end;
+    do return true end
   end,
   'Process', function(self,request) 
     do return self:_call(request) end
@@ -1521,8 +1589,11 @@ TestZephyr.main = function()
   Chocolate.WebSocket:OnData(function(p1,data,c1) 
     haxe.Log.trace(data:toString(),_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="TestZephyr.hx",lineNumber=35,className="TestZephyr",methodName="main"}));
   end);
-  Chocolate.WebSocket:OnError(function(p2,e) 
-    haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="TestZephyr.hx",lineNumber=39,className="TestZephyr",methodName="main"}));
+  Chocolate.WebSocket:OnClose(function(p2) 
+    haxe.Log.trace("CLOSE",_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="TestZephyr.hx",lineNumber=39,className="TestZephyr",methodName="main"}));
+  end);
+  Chocolate.WebSocket:OnError(function(p3,e) 
+    haxe.Log.trace(e,_hx_o({__fields__={fileName=true,lineNumber=true,className=true,methodName=true},fileName="TestZephyr.hx",lineNumber=43,className="TestZephyr",methodName="main"}));
   end);
   Chocolate.App:Listen(_hx_o({__fields__={Port=true,StaticDir=true,WebSocket=true},Port=8081,StaticDir="./out/media",WebSocket=true}));
 end

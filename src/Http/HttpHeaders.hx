@@ -19,38 +19,43 @@
  * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
-import haxe.io.Bytes;
-
 /**
- *  Web socket handler for http server
+ *  Http headers
  */
-class WebSocketHandler extends Handler {    
+@:final
+class HttpHeaders {
     /**
-     *  Callbacks
+     *  Content-Types that are acceptable for the response.
+     *  Accept: text/plain
      */
-    private var _handler : IWSHandler;
-    
-    /**
-     *  Constructor
-     */
-    public function new (handler : IWSHandler) {
-        _handler = handler;   
-    }
+    public inline static var Accept = "Accept";
 
     /**
-     *  Process request
-     *  @param context - Http context
+     *  Character sets that are acceptable.
+     *  Accept-Charset: utf-8
      */
-    public override function Process (context : HttpContext) : Void {
-        if (context.Request.Headers.exists ("Upgrade")) {
-            var ih = new InternalHandler (context);
-            ih.OnConnect = _handler.OnConnect;
-            ih.OnData = _handler.OnData;
-            ih.OnClose = _handler.OnClose;
-            ih.OnError = _handler.OnError;
-            ih.Start ();            
-        } else {            
-            CallNext (context);
-        }
-    }
+    public inline static var AcceptCharset = "Accept-Charset";
+
+    /**
+     *  List of acceptable encodings.
+     *  Accept-Encoding: gzip, deflate
+     */
+    public inline static var AcceptEncoding = "Accept-Encoding";
+
+
+
+
+    /**
+     *  The length of the request body in octets (8-bit bytes).
+     *  Content-Length: 348
+     */
+    public inline static var ContentLength = "Content-Length";
+
+
+
+    /**
+     *  A name for the server
+     *  Server: Apache/2.4.1 (Unix)
+     */
+    public inline static var Server = "Server";
 }

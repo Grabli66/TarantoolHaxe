@@ -19,6 +19,8 @@
  * THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 
+import lua.NativeStringTools;
+
 /**
  *  Request route
  */
@@ -38,6 +40,7 @@ class Route {
      *  @param pattern - pattern for request. Example: /mypage/:id
      */
     public function new (pattern : String, call : RequestCall) {
+        _pattern = pattern;
         // Bug?
         _call = function (r : Request) : Response {
             return call (r);
@@ -49,8 +52,20 @@ class Route {
      *  @param path - request path
      *  @return Bool
      */
-    public function IsMatch (path : String) : Bool {        
-        return _pattern == path;
+    public function IsMatch (path : String) : Bool {
+        // TODO: normal path match
+        
+        var items1 = path.split ("/");
+        var items2 = _pattern.split ("/");
+        if (items1.length != items2.length) return false;
+
+        for (s2 in items2) {
+            for (s1 in items1) {
+                if (s2 != s1) return false;
+            }
+        }
+
+        return true;
     }
 
     /**
@@ -58,7 +73,7 @@ class Route {
      *  @param request - request converted from http request
      *  @return Response
      */
-    public function Process (request : Request) : Response {        
+    public function Process (request : Request) : Response {
         return _call (request);
     }
 }

@@ -23,13 +23,29 @@ class HttpResponse implements IWriteChannel {
     /**
      *  Response status
      */
-    public var Status : HttpStatus = HttpStatus.Ok;    
+    public var Status : HttpStatus = HttpStatus.Ok;
+
+    /**
+     *  Write headers to channel
+     */
+    private function WriteHeaders () {
+        Headers[HttpHeaders.ContentLength] = Std.string (_buffer.length);
+        Headers[HttpHeaders.Server] = "tyrant";
+
+        for (k in Headers.keys()) {
+            var v = Headers.get (k);
+            Channel.WriteString ('${k}: ${v}\n');
+        }
+
+        Channel.WriteString ("\n");
+    }
 
     /**
         Constructor
     **/
     public function new (channel : IRWChannel) {
         Channel = channel;
+        Headers = new Map<String, String> ();
         Reset ();
     }
 
@@ -57,13 +73,12 @@ class HttpResponse implements IWriteChannel {
     }
 
     /**
-        Close channel
-    **/
+     *  Write http response
+     */
     public function Close () : Void {
         var descr = Status.GetDescription ();
         Channel.WriteString ('HTTP/1.1 ${Status} ${descr}\n');
-        Channel.WriteString ('Content-Length: ${_buffer.length}');
-        Channel.WriteString ("\n\n");
-        Channel.Write (_buffer.getBytes ());
+        WriteHeaders ();        
+        Channel.Write (_buffer.getBytes ());        
     }
 }

@@ -23,7 +23,9 @@ class HttpServer {
      *  @param channel - read write channel
      */
     private function ProcessClient (peer : Peer, channel : IRWChannel) {        
-        try {            
+        try {
+            trace ("Accept client");
+            // TODO: Keep-alive
             while (true) {
                 var request = new HttpRequest (channel);
                 var response = new HttpResponse (channel);

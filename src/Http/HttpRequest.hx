@@ -38,9 +38,9 @@ class HttpRequest {
     public var Method : HttpMethod;
 
     /**
-        Request resource
-    **/
-    public var Resource : Url;
+     *  Request resource       
+     */
+    public var Resource : Url;  // TODO: make own URL class with lua patterns
 
     /**
         Request headers
@@ -55,13 +55,15 @@ class HttpRequest {
     /**
         Read all headers
     **/
-    private function ReadHeaders (channel : IRWChannel) : Void {        
-        var line = channel.ReadUntil ("\n").trim ();
+    private function ReadHeaders (channel : IRWChannel) : Void {
+        var text = channel.ReadUntil ("\n");
+        if (text == null) throw "Connection closed";    // TODO: create internal error class to catch them
+        var line = text.trim ();
         var parts = line.split (" ");
         if (parts.length != 3) throw HttpStatus.BadRequest;
         Method = HttpMethod.createByName (parts[0].toLowerCase ());
         Resource = parts[1];
-        trace ('$Method $Resource');        
+        trace ('$Method $Resource');
 
         Headers = new Map<String, String> ();
 

@@ -25,12 +25,16 @@ enum WorkState {
         Get data
     **/
     DATA;
+    /**
+     *  Connection closed
+     */
+    CLOSE;
 }
 
 /**
     Handle websocket data
 **/
-class InternalHandler implements IWriteChannel {
+class InternalHandler implements IWriteChannel {    
     /**
         Message mask size
     **/
@@ -153,14 +157,7 @@ class InternalHandler implements IWriteChannel {
         var binaryData = _channel.Read (2);
         var frame = binaryData.get (0);
 
-        // Close frame
-        if ((frame & 0x08) > 0) {
-            _frameType = FrameType.CLOSE;
-        } else if ((frame & 0x02) > 0) {
-            _frameType = FrameType.BINARY;
-        } else {                        
-            throw "Only binary frame allowed";
-        }
+        _frameType = frame & 0x0F;
 
         var len = binaryData.get (1);
         _packLen = 0;
@@ -197,11 +194,14 @@ class InternalHandler implements IWriteChannel {
         var binaryData = _channel.Read (_packLen + MASK_SIZE);
 
         switch (_frameType) {
-            case FrameType.CLOSE: {
-                //if (_clientHandler.OnClose != null) _clientHandler.OnClose ();       
-                //OnClose (_socket);
+            case FrameType.CLOSE: {                
+                OnClose (null);
+                _state = WorkState.CLOSE;
+                Disconnect ();
             }
-            case FrameType.BINARY: {
+            case FrameType.TEXT | 
+                 FrameType.BINARY: 
+            {
                 var mask = binaryData.sub (0, MASK_SIZE);
                 var data = binaryData.sub (MASK_SIZE, binaryData.length - MASK_SIZE);                
                 var res = Bytes.alloc (data.length);
@@ -215,10 +215,10 @@ class InternalHandler implements IWriteChannel {
 
                 // On data
                 OnData (_peer, res, this);
-            }
-        }      
-        
-        _state = WorkState.FRAME_TYPE;
+                _state = WorkState.FRAME_TYPE;
+            }            
+            default: throw "Unknown frame";
+        }                  
     }
 
     /**
@@ -253,12 +253,13 @@ class InternalHandler implements IWriteChannel {
                     case WorkState.FRAME_TYPE: ProcessFrame ();
                     case WorkState.LENGTH: ProcessLength ();
                     case WorkState.DATA: ProcessData ();
+                    case WorkState.CLOSE: break;
                 }
             }
         }
         catch (e : Dynamic) {
             PushError (e);
-            //Disconnect ();
+            Disconnect ();
         }
     }    
 
